@@ -12,6 +12,8 @@ export interface RegistroHistorico {
   saidaAlmoco: number | null;
   retornoAlmoco: number | null;
   saidaDia: number;
+  isCompensacao?: boolean;
+  saldoCompensacao?: number; // Saldo em milissegundos
 }
 
 // Configurações do Banco de Dados
@@ -99,6 +101,30 @@ export async function arquivarRegistroNoHistorico(dadosPonto: DadosPonto): Promi
     
     // Adiciona o novo registro (a chave é extraída automaticamente do "id")
     const request = store.add(novoRegistro);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function obterHistoricoCompleto(): Promise<RegistroHistorico[]> {
+  const db = await abrirBancoDados();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction("historico", "readonly");
+    const store = transaction.objectStore("historico");
+    const request = store.getAll();
+
+    request.onsuccess = () => resolve(request.result as RegistroHistorico[]);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function salvarRegistroEditado(registro: RegistroHistorico): Promise<void> {
+  const db = await abrirBancoDados();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction("historico", "readwrite");
+    const store = transaction.objectStore("historico");
+    const request = store.put(registro); // put atualiza se o ID existir, ou insere se não existir
 
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);

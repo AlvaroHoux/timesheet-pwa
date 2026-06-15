@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Histórico de Ponto</title>
+    <link rel="stylesheet" href="../styles/registros.css" />
+  </head>
+  <body>
+    <header>
+      <div class="header-left">
+        <button
+          class="btn-voltar"
+          onclick="window.location.href = 'ponto.html'"
+        >
+          &#8592;
+        </button>
+        <div class="header-titles">
+          <h1 id="mesAtualTitulo">Carregando...</h1>
+          <small id="dataAtualSubtitulo">--/--/----</small>
+        </div>
+      </div>
+      <div class="header-balance">
+        <span>Saldo Total</span>
+        <strong id="saldoTotalHeader" class="saldo-positivo">+00:00</strong>
+      </div>
+    </header>
+
+    <main id="listaRegistros"></main>
+
+    <button class="fab" id="btnNovoRegistro">+</button>
+
+    <dialog id="registroModal">
+      <div class="modal-header" id="modalTitulo">
+        Novo Registro / Compensação
+      </div>
+      <form id="registroForm">
+        <input type="hidden" id="registroId" />
+
+        <div class="form-group">
+          <label>Tipo de Registro</label>
+          <select
+            id="inputTipoRegistro"
+            style="
+              background-color: #121212;
+              border: 1px solid var(--border-color);
+              color: white;
+              padding: 10px;
+              border-radius: 8px;
+              font-size: 1rem;
+            "
+          >
+            <option value="normal">Batidas do Dia</option>
+            <option value="compensacao">Compensação de Horas</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="inputData" required />
+        </div>
+
+        <div id="camposNormal">
+          <div class="form-group">
+            <label>Entrada</label>
+            <input type="time" id="inputEntrada" />
+          </div>
+          <div class="form-group">
+            <label>Saída Almoço</label>
+            <input type="time" id="inputSaidaAlmoco" />
+          </div>
+          <div class="form-group">
+            <label>Retorno Almoço</label>
+            <input type="time" id="inputRetornoAlmoco" />
+          </div>
+          <div class="form-group">
+            <label>Saída</label>
+            <input type="time" id="inputSaida" />
+          </div>
+        </div>
+
+        <div id="camposCompensacao" style="display: none">
+          <div class="form-group">
+            <label>Horas a Compensar</label>
+            <input
+              type="text"
+              id="inputHorasCompensacao"
+              placeholder="Ex: +02:30 ou -01:15"
+            />
+            <small style="color: var(--text-secondary); font-size: 0.75rem"
+              >Utilize + para horas extras ou - para débitos.</small
+            >
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn-modal btn-cancelar"
+            id="btnCancelarModal"
+          >
+            Cancelar
+          </button>
+          <button type="submit" class="btn-modal btn-salvar">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="module" src="../dist/registros-ui.js"></script>
+  </body>
+</html>
