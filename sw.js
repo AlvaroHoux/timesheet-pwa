@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ponto-v2';
+const CACHE_NAME = 'ponto-v3';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
