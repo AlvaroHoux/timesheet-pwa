@@ -20,6 +20,11 @@ export interface RegistroHistorico {
 const DB_NAME = "PontoEletronicoDB";
 const DB_VERSION = 1;
 
+export function obterCargaHoraria(): number {
+  const config = localStorage.getItem('cargaHoraria');
+  return config ? parseInt(config, 10) : 8 * 60 * 60 * 1000; // O padrão permanece em 8h
+}
+
 /**
  * Função utilitária para abrir a conexão com o IndexedDB.
  * Cria os "Object Stores" (tabelas) se for a primeira vez.

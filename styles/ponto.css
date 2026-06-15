@@ -111,14 +111,6 @@ body {
   font-weight: 600;
 }
 
-/* Área dos Botões Inferiores (20% da Altura) */
-.main-button-container {
-  flex: 7;
-  display: flex;
-  position: relative;
-  min-height: 0; /* Impede transbordo visual */
-}
-
 .btn-historico {
   flex: 1; /* Mudou de 9 para 1 para preencher tudo fluidamente */
   background-color: var(--surface-color);
@@ -143,8 +135,9 @@ body {
 }
 
 .btn-config {
-  flex: 1;
-  aspect-ratio: 1 / 1;
+  width: 120px; /* Define uma largura fixa pequena */
+  padding: 0; /* Ajuste o padding se necessário */
+  font-size: 1.4rem; /* Um pouco menor para não pesar visualmente */
   background-color: var(--surface-color);
   border: 1px solid #2d2d2d;
   border-radius: 20px;
@@ -156,7 +149,6 @@ body {
   justify-content: center;
   transition:
     background-color 0.2s,
-    transform 0.3s,
     border-color 0.2s;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
@@ -164,5 +156,4 @@ body {
 .btn-config:hover {
   background-color: var(--surface-hover);
   border-color: #444;
-  transform: rotate(45deg);
 }

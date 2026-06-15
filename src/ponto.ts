@@ -3,10 +3,10 @@ import {
   arquivarRegistroNoHistorico,
   salvarEstado,
   carregarEstado,
+  obterCargaHoraria,
 } from "./registros.js";
 
 // Configurações de tempo padrão (em milissegundos)
-const JORNADA_DIARIA: number = 8 * 60 * 60 * 1000;
 const TEMPO_ALMOCO: number = 1 * 60 * 60 * 1000;
 
 // Estado inicial da aplicação
@@ -33,8 +33,39 @@ const inputSaidaAlmocoHoje = document.getElementById("inputSaidaAlmocoHoje") as 
 const inputRetornoAlmocoHoje = document.getElementById("inputRetornoAlmocoHoje") as HTMLInputElement;
 const btnCancelarEdicaoHoje = document.getElementById("btnCancelarEdicaoHoje") as HTMLButtonElement;
 
+const btnConfig = document.querySelector('.btn-config') as HTMLButtonElement;
+const modalConfig = document.getElementById('modalConfig') as HTMLDialogElement;
+const formConfig = document.getElementById('formConfig') as HTMLFormElement;
+const inputHorasCarga = document.getElementById('inputHorasCarga') as HTMLInputElement;
+const inputMinutosCarga = document.getElementById('inputMinutosCarga') as HTMLInputElement;
+const btnCancelarConfig = document.getElementById('btnCancelarConfig') as HTMLButtonElement;
+
 let temporizadorPressao: ReturnType<typeof setTimeout> | null = null;
 let estaPressionando: boolean = false;
+
+btnConfig.addEventListener('click', () => {
+  const cargaMs = obterCargaHoraria();
+  const horas = Math.floor(cargaMs / (60 * 60 * 1000));
+  const minutos = Math.floor((cargaMs % (60 * 60 * 1000)) / (60 * 1000));
+  inputHorasCarga.value = horas.toString();
+  inputMinutosCarga.value = minutos.toString();
+  modalConfig.showModal();
+});
+
+btnCancelarConfig.addEventListener('click', () => {
+  modalConfig.close();
+});
+
+formConfig.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const horas = parseInt(inputHorasCarga.value || '0', 10);
+  const minutos = parseInt(inputMinutosCarga.value || '0', 10);
+  const cargaMs = (horas * 60 * 60 * 1000) + (minutos * 60 * 1000);
+
+  localStorage.setItem('cargaHoraria', cargaMs.toString());
+  modalConfig.close();
+  atualizarInterface();
+});
 
 // --- LÓGICA DE TRANSIÇÃO DE ESTADO ---
 async function alternarEstadoPonto(): Promise<void> {
@@ -165,7 +196,7 @@ function atualizarInterface(): void {
       statusDisplay.textContent = "Trabalhando (Turno 1)";
       if (dadosPonto.inicioDia) {
         const tempoDecorrido1 = agoraMs - dadosPonto.inicioDia;
-        const restante1 = JORNADA_DIARIA - tempoDecorrido1;
+        const restante1 = obterCargaHoraria() - tempoDecorrido1;
         exibirContagemRegressivaOuExtra(restante1);
       }
       break;
@@ -194,12 +225,12 @@ function atualizarInterface(): void {
         const tempoTrabalhadoTurno1 = dadosPonto.inicioAlmoco - dadosPonto.inicioDia;
         const tempoTrabalhadoTurno2 = agoraMs - dadosPonto.fimAlmoco;
         const totalTrabalhado = tempoTrabalhadoTurno1 + tempoTrabalhadoTurno2;
-        const restante2 = JORNADA_DIARIA - totalTrabalhado;
+        const restante2 = obterCargaHoraria() - totalTrabalhado;
         exibirContagemRegressivaOuExtra(restante2);
       } else if (dadosPonto.inicioDia) {
         // Fallback caso não haja almoço registrado
         const tempoTotalTrabalhadoDireto = agoraMs - dadosPonto.inicioDia;
-        const restanteSemAlmoco = JORNADA_DIARIA - tempoTotalTrabalhadoDireto;
+        const restanteSemAlmoco = obterCargaHoraria() - tempoTotalTrabalhadoDireto;
         exibirContagemRegressivaOuExtra(restanteSemAlmoco);
       }
       break;

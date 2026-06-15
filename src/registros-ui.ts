@@ -1,6 +1,4 @@
-import { RegistroHistorico, obterHistoricoCompleto, salvarRegistroEditado } from "./registros.js";
-
-const JORNADA_DIARIA_MS = 8 * 60 * 60 * 1000;
+import { RegistroHistorico, obterCargaHoraria, obterHistoricoCompleto, salvarRegistroEditado } from "./registros.js";
 
 // Elementos do DOM
 const mesAtualTitulo = document.getElementById('mesAtualTitulo') as HTMLHeadingElement;
@@ -67,7 +65,7 @@ function calcularSaldoRegistro(registro: RegistroHistorico): number {
     } else {
         tempoTrabalhado += (registro.saidaDia - registro.entrada);
     }
-    return tempoTrabalhado - JORNADA_DIARIA_MS;
+    return tempoTrabalhado - obterCargaHoraria();
 }
 
 function formatarSaldoExtenso(saldoMs: number): string {

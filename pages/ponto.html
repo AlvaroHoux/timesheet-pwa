@@ -50,13 +50,7 @@
       >
         Registros 📋
       </button>
-      <button
-        class="btn-config"
-        aria-label="Configurações"
-        style="display: none"
-      >
-        ⚙️
-      </button>
+      <button class="btn-config" aria-label="Configurações">⚙️</button>
     </div>
 
     <dialog id="modalEdicaoHoje">
@@ -95,6 +89,68 @@
           <button type="submit" class="btn-modal btn-salvar">
             Salvar Horários
           </button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="modalConfig">
+      <div
+        class="modal-header"
+        style="
+          font-size: 1.2rem;
+          font-weight: bold;
+          margin-bottom: 15px;
+          color: var(--primary-color);
+        "
+      >
+        Configurações
+      </div>
+      <form id="formConfig">
+        <div class="form-group">
+          <label>Carga Horária Diária</label>
+          <div style="display: flex; gap: 10px">
+            <input
+              type="number"
+              id="inputHorasCarga"
+              placeholder="Horas"
+              min="0"
+              max="24"
+              required
+              style="
+                width: 50%;
+                background-color: #121212;
+                border: 1px solid #333;
+                color: white;
+                padding: 10px;
+                border-radius: 8px;
+              "
+            />
+            <input
+              type="number"
+              id="inputMinutosCarga"
+              placeholder="Minutos"
+              min="0"
+              max="59"
+              required
+              style="
+                width: 50%;
+                background-color: #121212;
+                border: 1px solid #333;
+                color: white;
+                padding: 10px;
+                border-radius: 8px;
+              "
+            />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn-modal btn-cancelar"
+            id="btnCancelarConfig"
+          >
+            Cancelar
+          </button>
+          <button type="submit" class="btn-modal btn-salvar">Salvar</button>
         </div>
       </form>
     </dialog>
