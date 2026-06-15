@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Ponto</title>
+    <link rel="stylesheet" href="../styles/ponto.css">
+</head>
+<body>
+
+    <div class="main-button-container">
+        <button id="btnPonto" class="btn-ponto">
+            <div id="clockDisplay" class="clock-display">00:00:00</div>
+            <div id="statusDisplay" class="status-display">Carregando...</div>
+            <div id="countdownDisplay" class="countdown-display">--:--:--</div>
+        </button>
+    </div>
+
+    <div class="bottom-container">
+        <button class="btn-historico" onclick="window.location.href='historico.html'">Registros</button>
+        <button class="btn-config" aria-label="Configurações">⚙️</button>
+    </div>
+
+    <script src="../dist/ponto.js"></script>
+</body>
+</html>
