@@ -60,6 +60,13 @@ body {
   transform: scale(0.98);
 }
 
+.bottom-container {
+  flex: 2;
+  display: flex;
+  gap: 20px;
+  width: 100%;
+}
+
 /* Efeito de preenchimento ao segurar o botão */
 .btn-ponto::before {
   content: "";
@@ -69,7 +76,7 @@ body {
   width: 100%;
   height: 0%;
   background-color: rgba(3, 218, 198, 0.12);
-  transition: height 3s linear;
+  transition: height 1.5s linear;
   z-index: 1;
 }
 
@@ -105,15 +112,15 @@ body {
 }
 
 /* Área dos Botões Inferiores (20% da Altura) */
-.bottom-container {
-  flex: 2;
+.main-button-container {
+  flex: 7;
   display: flex;
-  gap: 20px;
-  width: 100%;
+  position: relative;
+  min-height: 0; /* Impede transbordo visual */
 }
 
 .btn-historico {
-  flex: 9;
+  flex: 1; /* Mudou de 9 para 1 para preencher tudo fluidamente */
   background-color: var(--surface-color);
   border: 1px solid #2d2d2d;
   border-radius: 20px;

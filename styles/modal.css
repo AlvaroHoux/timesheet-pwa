@@ -1,0 +1,95 @@
+.top-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.estado-dropdown {
+  flex: 1;
+  background-color: var(--surface-color, #1e1e1e);
+  color: var(--text-color, #ffffff);
+  border: 1px solid #333;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.btn-editar-hoje {
+  background-color: var(--surface-color, #1e1e1e);
+  border: 1px solid #333;
+  border-radius: 12px;
+  color: var(--text-color, #ffffff);
+  padding: 10px 15px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal de Edição do Dia Atual (Reaproveitando estilo do registros.html) */
+dialog {
+  background-color: var(--surface-color, #1e1e1e);
+  color: var(--text-color, #ffffff);
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 20px;
+  width: 90%;
+  max-width: 400px;
+  margin: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.form-group {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #a0a0a0);
+}
+
+.form-group input {
+  background-color: #121212;
+  border: 1px solid #333;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn-modal {
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-cancelar {
+  background-color: transparent;
+  color: var(--text-color, #ffffff);
+  border: 1px solid #333;
+}
+
+.btn-salvar {
+  background-color: var(--primary-color, #03dac6);
+  color: #000;
+}

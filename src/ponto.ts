@@ -6,8 +6,8 @@ import {
 } from "./registros.js";
 
 // Configurações de tempo padrão (em milissegundos)
-const JORNADA_DIARIA: number = 8 * 60 * 60 * 1000; // 8 horas
-const TEMPO_ALMOCO: number = 1 * 60 * 60 * 1000; // 1 hora
+const JORNADA_DIARIA: number = 8 * 60 * 60 * 1000;
+const TEMPO_ALMOCO: number = 1 * 60 * 60 * 1000;
 
 // Estado inicial da aplicação
 let dadosPonto: DadosPonto = {
@@ -20,34 +20,42 @@ let dadosPonto: DadosPonto = {
 // Mapeamento e asserção de tipos dos elementos do DOM
 const btnPonto = document.getElementById("btnPonto") as HTMLButtonElement;
 const clockDisplay = document.getElementById("clockDisplay") as HTMLDivElement;
-const statusDisplay = document.getElementById(
-  "statusDisplay",
-) as HTMLDivElement;
-const countdownDisplay = document.getElementById(
-  "countdownDisplay",
-) as HTMLDivElement;
+const statusDisplay = document.getElementById("statusDisplay") as HTMLDivElement;
+const countdownDisplay = document.getElementById("countdownDisplay") as HTMLDivElement;
+
+// Elementos da Barra Superior e Modal
+const estadoDropdown = document.getElementById("estadoDropdown") as HTMLSelectElement;
+const btnEditarHoje = document.getElementById("btnEditarHoje") as HTMLButtonElement;
+const modalEdicaoHoje = document.getElementById("modalEdicaoHoje") as HTMLDialogElement;
+const formEdicaoHoje = document.getElementById("formEdicaoHoje") as HTMLFormElement;
+const inputEntradaHoje = document.getElementById("inputEntradaHoje") as HTMLInputElement;
+const inputSaidaAlmocoHoje = document.getElementById("inputSaidaAlmocoHoje") as HTMLInputElement;
+const inputRetornoAlmocoHoje = document.getElementById("inputRetornoAlmocoHoje") as HTMLInputElement;
+const btnCancelarEdicaoHoje = document.getElementById("btnCancelarEdicaoHoje") as HTMLButtonElement;
 
 let temporizadorPressao: ReturnType<typeof setTimeout> | null = null;
 let estaPressionando: boolean = false;
 
-function alternarEstadoPonto(): void {
+// --- LÓGICA DE TRANSIÇÃO DE ESTADO ---
+async function alternarEstadoPonto(): Promise<void> {
   const agora: number = Date.now();
+  const dadosParaArquivar = { ...dadosPonto };
 
   switch (dadosPonto.estado) {
-    case 0: // Iniciar o Dia
+    case 0:
       dadosPonto.estado = 1;
       dadosPonto.inicioDia = agora;
       break;
-    case 1: // Ir para o Almoço
+    case 1:
       dadosPonto.estado = 2;
       dadosPonto.inicioAlmoco = agora;
       break;
-    case 2: // Voltar do Almoço
+    case 2:
       dadosPonto.estado = 3;
       dadosPonto.fimAlmoco = agora;
       break;
-    case 3: // Finalizar a Jornada
-      arquivarRegistroNoHistorico(dadosPonto);
+    case 3:
+      await arquivarRegistroNoHistorico(dadosParaArquivar);
       dadosPonto = {
         estado: 0,
         inicioDia: null,
@@ -56,17 +64,71 @@ function alternarEstadoPonto(): void {
       };
       break;
   }
-  salvarEstado(dadosPonto);
+  
+  await salvarEstado(dadosPonto);
   executarFeedbackHaptico();
+  atualizarInterface();
 }
 
-// --- CONTROLE DE TEMPO E FORMATAÇÃO ---
+// --- CONTROLES DO DROPDOWN E MODAL ---
+estadoDropdown.addEventListener("change", async () => {
+  const novoEstado = parseInt(estadoDropdown.value, 10);
+  const agora = Date.now();
+
+  // Se avançar estados, preenche tempos vazios com o momento atual
+  if (novoEstado >= 1 && !dadosPonto.inicioDia) dadosPonto.inicioDia = agora;
+  if (novoEstado >= 2 && !dadosPonto.inicioAlmoco) dadosPonto.inicioAlmoco = agora;
+  if (novoEstado >= 3 && !dadosPonto.fimAlmoco) dadosPonto.fimAlmoco = agora;
+
+  dadosPonto.estado = novoEstado;
+  await salvarEstado(dadosPonto);
+  atualizarInterface();
+});
+
+btnEditarHoje.addEventListener("click", () => {
+  inputEntradaHoje.value = extrairHora(dadosPonto.inicioDia);
+  inputSaidaAlmocoHoje.value = extrairHora(dadosPonto.inicioAlmoco);
+  inputRetornoAlmocoHoje.value = extrairHora(dadosPonto.fimAlmoco);
+  modalEdicaoHoje.showModal();
+});
+
+btnCancelarEdicaoHoje.addEventListener("click", () => {
+  modalEdicaoHoje.close();
+});
+
+formEdicaoHoje.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  
+  dadosPonto.inicioDia = converterHoraParaTimestampHoje(inputEntradaHoje.value);
+  dadosPonto.inicioAlmoco = converterHoraParaTimestampHoje(inputSaidaAlmocoHoje.value);
+  dadosPonto.fimAlmoco = converterHoraParaTimestampHoje(inputRetornoAlmocoHoje.value);
+
+  await salvarEstado(dadosPonto);
+  atualizarInterface();
+  modalEdicaoHoje.close();
+});
+
+// --- FUNÇÕES DE TEMPO E FORMATAÇÃO ---
 function formatarTempo(ms: number): string {
   const totalSegundos: number = Math.floor(Math.abs(ms) / 1000);
   const horas: number = Math.floor(totalSegundos / 3600);
   const minutos: number = Math.floor((totalSegundos % 3600) / 60);
   const segundos: number = totalSegundos % 60;
   return `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}:${String(segundos).padStart(2, "0")}`;
+}
+
+function extrairHora(timestamp: number | null): string {
+  if (!timestamp) return "";
+  const data = new Date(timestamp);
+  return `${String(data.getHours()).padStart(2, "0")}:${String(data.getMinutes()).padStart(2, "0")}`;
+}
+
+function converterHoraParaTimestampHoje(horaStr: string): number | null {
+  if (!horaStr) return null;
+  const [hora, minuto] = horaStr.split(":");
+  const data = new Date();
+  data.setHours(Number(hora), Number(minuto), 0, 0);
+  return data.getTime();
 }
 
 function exibirContagemRegressivaOuExtra(tempoRestante: number): void {
@@ -82,6 +144,11 @@ function exibirContagemRegressivaOuExtra(tempoRestante: number): void {
 function atualizarInterface(): void {
   const agora: Date = new Date();
   const agoraMs: number = agora.getTime();
+
+  // Sincroniza visualmente o select com o estado atual do banco
+  if (estadoDropdown.value !== dadosPonto.estado.toString()) {
+    estadoDropdown.value = dadosPonto.estado.toString();
+  }
 
   if (dadosPonto.estado !== 2) {
     clockDisplay.textContent = agora.toTimeString().split(" ")[0];
@@ -123,33 +190,33 @@ function atualizarInterface(): void {
 
     case 3:
       statusDisplay.textContent = "Trabalhando (Turno 2)";
-      if (
-        dadosPonto.inicioDia &&
-        dadosPonto.inicioAlmoco &&
-        dadosPonto.fimAlmoco
-      ) {
-        const tempoTrabalhadoTurno1 =
-          dadosPonto.inicioAlmoco - dadosPonto.inicioDia;
+      if (dadosPonto.inicioDia && dadosPonto.inicioAlmoco && dadosPonto.fimAlmoco) {
+        const tempoTrabalhadoTurno1 = dadosPonto.inicioAlmoco - dadosPonto.inicioDia;
         const tempoTrabalhadoTurno2 = agoraMs - dadosPonto.fimAlmoco;
         const totalTrabalhado = tempoTrabalhadoTurno1 + tempoTrabalhadoTurno2;
         const restante2 = JORNADA_DIARIA - totalTrabalhado;
         exibirContagemRegressivaOuExtra(restante2);
+      } else if (dadosPonto.inicioDia) {
+        // Fallback caso não haja almoço registrado
+        const tempoTotalTrabalhadoDireto = agoraMs - dadosPonto.inicioDia;
+        const restanteSemAlmoco = JORNADA_DIARIA - tempoTotalTrabalhadoDireto;
+        exibirContagemRegressivaOuExtra(restanteSemAlmoco);
       }
       break;
   }
 }
 
-// --- LOGICA DO PRESSIONAMENTO DE 3 SEGUNDOS ---
+// --- LOGICA DO PRESSIONAMENTO DE 1.5 SEGUNDOS ---
 function iniciarPressao(e: Event): void {
   if (estaPressionando) return;
   e.preventDefault();
   estaPressionando = true;
   btnPonto.classList.add("pressing");
 
-  temporizadorPressao = setTimeout(() => {
-    alternarEstadoPonto();
+  temporizadorPressao = setTimeout(async () => {
+    await alternarEstadoPonto();
     finalizarPressao();
-  }, 3000);
+  }, 1500); 
 }
 
 function finalizarPressao(): void {
@@ -168,7 +235,7 @@ function executarFeedbackHaptico(): void {
   }
 }
 
-// Ouvintes de Eventos adaptados com suporte a MouseEvent e TouchEvent
+// Ouvintes de Eventos
 btnPonto.addEventListener("mousedown", iniciarPressao);
 btnPonto.addEventListener("mouseup", finalizarPressao);
 btnPonto.addEventListener("mouseleave", finalizarPressao);
