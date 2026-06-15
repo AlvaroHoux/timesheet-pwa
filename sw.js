@@ -1,16 +1,19 @@
-const CACHE_NAME = 'ponto-v1';
+const CACHE_NAME = 'ponto-v2';
 const ASSETS_TO_CACHE = [
-    '/',
-    '/index.html',
-    '/pages/ponto.html',
-    '/pages/registros.html',
-    '/styles/ponto.css',
-    '/styles/modal.css',
-    '/dist/ponto.js',
-    '/dist/registros.js',
-    '/dist/registros-ui.js',
-    '/dist/sw-register.js'
-    // Posteriormente, adicione aqui o caminho do seu manifest.json e ícones
+    './',
+    './index.html',
+    './pages/ponto.html',
+    './pages/registros.html',
+    './styles/ponto.css',
+    './styles/modal.css',
+    './styles/registros.css',
+    './dist/ponto.js',
+    './dist/registros.js',
+    './dist/registros-ui.js',
+    './dist/sw-register.js',
+    './manifest.json',
+    './assets/icon-192x192.png',
+    './assets/icon-512x512.png'
 ];
 
 // Instalação: Salva os arquivos essenciais no cache

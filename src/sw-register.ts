@@ -2,7 +2,7 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     // Registra apontando para a raiz
     navigator.serviceWorker
-      .register("./sw.js")
+      .register("../sw.js")
       .then((reg) => {
         console.log("SW registrado com sucesso. Escopo:", reg.scope);
 
