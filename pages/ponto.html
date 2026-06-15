@@ -1,59 +1,98 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1e1e1e" />
+    <link rel="apple-touch-icon" href="/assets/icon-192x192.png" />
+    <link rel="icon" type="image/png" href="/assets/icon-192x192.png" />
     <title>Registro de Ponto</title>
-    <link rel="stylesheet" href="../styles/ponto.css">
-    <link rel="stylesheet" href="../styles/modal.css">
-</head>
-<body>
-
+    <link rel="stylesheet" href="../styles/ponto.css" />
+    <link rel="stylesheet" href="../styles/modal.css" />
+  </head>
+  <body>
     <div class="top-bar">
-        <select id="estadoDropdown" class="estado-dropdown">
-            <option value="0">Não Iniciado</option>
-            <option value="1">Trabalhando (Turno 1)</option>
-            <option value="2">Em Horário de Almoço</option>
-            <option value="3">Trabalhando (Turno 2)</option>
-        </select>
-        <button id="btnEditarHoje" class="btn-editar-hoje" aria-label="Editar Horários de Hoje">✏️</button>
+      <select id="estadoDropdown" class="estado-dropdown">
+        <option value="0">Não Iniciado</option>
+        <option value="1">Trabalhando (Turno 1)</option>
+        <option value="2">Em Horário de Almoço</option>
+        <option value="3">Trabalhando (Turno 2)</option>
+      </select>
+      <button
+        id="btnEditarHoje"
+        class="btn-editar-hoje"
+        aria-label="Editar Horários de Hoje"
+      >
+        ✏️
+      </button>
     </div>
 
     <div class="main-button-container">
-        <button id="btnPonto" class="btn-ponto">
-            <div id="clockDisplay" class="clock-display">00:00:00</div>
-            <div id="statusDisplay" class="status-display">Carregando...</div>
-            <div id="countdownDisplay" class="countdown-display">--:--:--</div>
-        </button>
+      <button id="btnPonto" class="btn-ponto">
+        <div id="clockDisplay" class="clock-display">00:00:00</div>
+        <div id="statusDisplay" class="status-display">Carregando...</div>
+        <div id="countdownDisplay" class="countdown-display">--:--:--</div>
+      </button>
     </div>
 
     <div class="bottom-container">
-        <button class="btn-historico" onclick="window.location.href='registros.html'">Registros</button>
-        <button class="btn-config" aria-label="Configurações" style="display: none;">⚙️</button>
+      <button
+        class="btn-historico"
+        onclick="window.location.href = 'registros.html'"
+      >
+        Registros 📋
+      </button>
+      <button
+        class="btn-config"
+        aria-label="Configurações"
+        style="display: none"
+      >
+        ⚙️
+      </button>
     </div>
 
     <dialog id="modalEdicaoHoje">
-        <div class="modal-header" style="font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; color: var(--primary-color);">Editar Dia Atual</div>
-        <form id="formEdicaoHoje">
-            <div class="form-group">
-                <label>Entrada (Turno 1)</label>
-                <input type="time" id="inputEntradaHoje">
-            </div>
-            <div class="form-group">
-                <label>Saída para Almoço</label>
-                <input type="time" id="inputSaidaAlmocoHoje">
-            </div>
-            <div class="form-group">
-                <label>Retorno do Almoço</label>
-                <input type="time" id="inputRetornoAlmocoHoje">
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn-modal btn-cancelar" id="btnCancelarEdicaoHoje">Cancelar</button>
-                <button type="submit" class="btn-modal btn-salvar">Salvar Horários</button>
-            </div>
-        </form>
+      <div
+        class="modal-header"
+        style="
+          font-size: 1.2rem;
+          font-weight: bold;
+          margin-bottom: 15px;
+          color: var(--primary-color);
+        "
+      >
+        Editar Dia Atual
+      </div>
+      <form id="formEdicaoHoje">
+        <div class="form-group">
+          <label>Entrada (Turno 1)</label>
+          <input type="time" id="inputEntradaHoje" />
+        </div>
+        <div class="form-group">
+          <label>Saída para Almoço</label>
+          <input type="time" id="inputSaidaAlmocoHoje" />
+        </div>
+        <div class="form-group">
+          <label>Retorno do Almoço</label>
+          <input type="time" id="inputRetornoAlmocoHoje" />
+        </div>
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn-modal btn-cancelar"
+            id="btnCancelarEdicaoHoje"
+          >
+            Cancelar
+          </button>
+          <button type="submit" class="btn-modal btn-salvar">
+            Salvar Horários
+          </button>
+        </div>
+      </form>
     </dialog>
 
     <script type="module" src="../dist/ponto.js"></script>
-</body>
+    <script type="module" src="../dist/sw-register.js"></script>
+  </body>
 </html>
