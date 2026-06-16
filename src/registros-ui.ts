@@ -1,4 +1,5 @@
-import { RegistroHistorico, obterCargaHoraria, obterHistoricoCompleto, salvarRegistroEditado } from "./registros.js";
+import { RegistroHistorico, obterCargaHoraria, obterHistoricoCompleto, salvarRegistroEditado, removerRegistroDoHistorico } from "./registros.js";
+import { applyLongPress } from "./utils/long-press.js";
 
 // Elementos do DOM
 const mesAtualTitulo = document.getElementById('mesAtualTitulo') as HTMLHeadingElement;
@@ -33,7 +34,6 @@ function inicializarCabecalho(): void {
     dataAtualSubtitulo.textContent = hoje.toLocaleDateString('pt-BR');
 }
 
-// Alternar visibilidade dos campos no modal
 inputTipoRegistro.addEventListener('change', () => {
     if (inputTipoRegistro.value === 'compensacao') {
         camposNormal.style.display = 'none';
@@ -88,6 +88,12 @@ function converterStringCompensacaoParaMs(str: string): number {
     return sinal * ((horas * 3600000) + (minutos * 60000));
 }
 
+function executarFeedbackExclusao(): void {
+    if (navigator.vibrate) {
+        navigator.vibrate([100, 200, 100]); // Vibração distinta para alertas irreversíveis
+    }
+}
+
 // --- RENDERIZAÇÃO ---
 async function carregarEExibirRegistros(): Promise<void> {
     const historico = await obterHistoricoCompleto();
@@ -107,15 +113,14 @@ async function carregarEExibirRegistros(): Promise<void> {
         card.className = 'registro-card';
 
         if (registro.isCompensacao) {
-            // Renderização Específica para Compensação
             card.innerHTML = `
                 <div class="registro-info">
                     <span class="registro-data">Compensação (${registro.data})</span>
+                    <span class="registro-tempos">Segure 3s para deletar</span>
                 </div>
                 <div class="registro-saldo ${classeSaldo}">${strSaldo}</div>
             `;
         } else {
-            // Renderização Normal
             const temposFormatados = `${extrairHora(registro.entrada)} | ${extrairHora(registro.saidaAlmoco)} | ${extrairHora(registro.retornoAlmoco)} | ${extrairHora(registro.saidaDia)}`;
             card.innerHTML = `
                 <div class="registro-info">
@@ -126,7 +131,24 @@ async function carregarEExibirRegistros(): Promise<void> {
             `;
         }
         
-        card.addEventListener('click', () => abrirModalEdicao(registro));
+        // Aplicação do componente modular: Clique curto para editar, Segurar (3s) para remover
+        applyLongPress(
+            card,
+            3000,
+            async () => {
+                // Ação ao segurar 3s (Exclusão)
+                executarFeedbackExclusao();
+                await removerRegistroDoHistorico(registro.id);
+                await carregarEExibirRegistros(); // Recarrega a tela
+            },
+            () => {
+                // Ação do Clique Simples (Edição)
+                abrirModalEdicao(registro);
+            },
+            () => card.style.opacity = '0.5', // Start
+            () => card.style.opacity = '1'    // Cancel
+        );
+
         listaRegistros.appendChild(card);
     });
 
@@ -194,7 +216,7 @@ registroForm.addEventListener('submit', async (e) => {
             entrada: null,
             saidaAlmoco: null,
             retornoAlmoco: null,
-            saidaDia: Date.now(), // Apenas para preencher interface
+            saidaDia: Date.now(), 
             isCompensacao: true,
             saldoCompensacao: converterStringCompensacaoParaMs(inputHorasCompensacao.value)
         };

@@ -21,7 +21,7 @@ const DB_NAME = "PontoEletronicoDB";
 const DB_VERSION = 1;
 
 export function obterCargaHoraria(): number {
-  const config = localStorage.getItem('cargaHoraria');
+  const config = localStorage.getItem("cargaHoraria");
   return config ? parseInt(config, 10) : 8 * 60 * 60 * 1000; // O padrão permanece em 8h
 }
 
@@ -35,12 +35,12 @@ function abrirBancoDados(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      
+
       // Store para o estado atual (usaremos a chave "atual" manualmente)
       if (!db.objectStoreNames.contains("estado")) {
         db.createObjectStore("estado");
       }
-      
+
       // Store para o histórico (usaremos o "id" como chave primária)
       if (!db.objectStoreNames.contains("historico")) {
         db.createObjectStore("historico", { keyPath: "id" });
@@ -54,7 +54,7 @@ function abrirBancoDados(): Promise<IDBDatabase> {
 
 export async function carregarEstado(): Promise<DadosPonto> {
   const db = await abrirBancoDados();
-  
+
   return new Promise((resolve, reject) => {
     const transaction = db.transaction("estado", "readonly");
     const store = transaction.objectStore("estado");
@@ -65,7 +65,12 @@ export async function carregarEstado(): Promise<DadosPonto> {
         resolve(request.result as DadosPonto);
       } else {
         // Retorna o estado inicial se nada for encontrado
-        resolve({ estado: 0, inicioDia: null, inicioAlmoco: null, fimAlmoco: null });
+        resolve({
+          estado: 0,
+          inicioDia: null,
+          inicioAlmoco: null,
+          fimAlmoco: null,
+        });
       }
     };
 
@@ -75,11 +80,11 @@ export async function carregarEstado(): Promise<DadosPonto> {
 
 export async function salvarEstado(dadosPonto: DadosPonto): Promise<void> {
   const db = await abrirBancoDados();
-  
+
   return new Promise((resolve, reject) => {
     const transaction = db.transaction("estado", "readwrite");
     const store = transaction.objectStore("estado");
-    
+
     // Como o store não tem keyPath, passamos a chave "atual" no segundo parâmetro
     const request = store.put(dadosPonto, "atual");
 
@@ -88,9 +93,11 @@ export async function salvarEstado(dadosPonto: DadosPonto): Promise<void> {
   });
 }
 
-export async function arquivarRegistroNoHistorico(dadosPonto: DadosPonto): Promise<void> {
+export async function arquivarRegistroNoHistorico(
+  dadosPonto: DadosPonto,
+): Promise<void> {
   const db = await abrirBancoDados();
-  
+
   const novoRegistro: RegistroHistorico = {
     id: Date.now(),
     data: new Date().toLocaleDateString("pt-BR"),
@@ -103,7 +110,7 @@ export async function arquivarRegistroNoHistorico(dadosPonto: DadosPonto): Promi
   return new Promise((resolve, reject) => {
     const transaction = db.transaction("historico", "readwrite");
     const store = transaction.objectStore("historico");
-    
+
     // Adiciona o novo registro (a chave é extraída automaticamente do "id")
     const request = store.add(novoRegistro);
 
@@ -124,12 +131,26 @@ export async function obterHistoricoCompleto(): Promise<RegistroHistorico[]> {
   });
 }
 
-export async function salvarRegistroEditado(registro: RegistroHistorico): Promise<void> {
+export async function salvarRegistroEditado(
+  registro: RegistroHistorico,
+): Promise<void> {
   const db = await abrirBancoDados();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction("historico", "readwrite");
     const store = transaction.objectStore("historico");
     const request = store.put(registro); // put atualiza se o ID existir, ou insere se não existir
+
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function removerRegistroDoHistorico(id: number): Promise<void> {
+  const db = await abrirBancoDados();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction("historico", "readwrite");
+    const store = transaction.objectStore("historico");
+    const request = store.delete(id);
 
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);

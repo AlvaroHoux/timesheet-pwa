@@ -1,282 +1,280 @@
 import {
-  DadosPonto,
-  arquivarRegistroNoHistorico,
-  salvarEstado,
-  carregarEstado,
-  obterCargaHoraria,
-} from "./registros.js";
-
-// Configurações de tempo padrão (em milissegundos)
-const TEMPO_ALMOCO: number = 1 * 60 * 60 * 1000;
-
-// Estado inicial da aplicação
-let dadosPonto: DadosPonto = {
-  estado: 0,
-  inicioDia: null,
-  inicioAlmoco: null,
-  fimAlmoco: null,
-};
-
-// Mapeamento e asserção de tipos dos elementos do DOM
-const btnPonto = document.getElementById("btnPonto") as HTMLButtonElement;
-const clockDisplay = document.getElementById("clockDisplay") as HTMLDivElement;
-const statusDisplay = document.getElementById("statusDisplay") as HTMLDivElement;
-const countdownDisplay = document.getElementById("countdownDisplay") as HTMLDivElement;
-
-// Elementos da Barra Superior e Modal
-const estadoDropdown = document.getElementById("estadoDropdown") as HTMLSelectElement;
-const btnEditarHoje = document.getElementById("btnEditarHoje") as HTMLButtonElement;
-const modalEdicaoHoje = document.getElementById("modalEdicaoHoje") as HTMLDialogElement;
-const formEdicaoHoje = document.getElementById("formEdicaoHoje") as HTMLFormElement;
-const inputEntradaHoje = document.getElementById("inputEntradaHoje") as HTMLInputElement;
-const inputSaidaAlmocoHoje = document.getElementById("inputSaidaAlmocoHoje") as HTMLInputElement;
-const inputRetornoAlmocoHoje = document.getElementById("inputRetornoAlmocoHoje") as HTMLInputElement;
-const btnCancelarEdicaoHoje = document.getElementById("btnCancelarEdicaoHoje") as HTMLButtonElement;
-
-const btnConfig = document.querySelector('.btn-config') as HTMLButtonElement;
-const modalConfig = document.getElementById('modalConfig') as HTMLDialogElement;
-const formConfig = document.getElementById('formConfig') as HTMLFormElement;
-const inputHorasCarga = document.getElementById('inputHorasCarga') as HTMLInputElement;
-const inputMinutosCarga = document.getElementById('inputMinutosCarga') as HTMLInputElement;
-const btnCancelarConfig = document.getElementById('btnCancelarConfig') as HTMLButtonElement;
-
-let temporizadorPressao: ReturnType<typeof setTimeout> | null = null;
-let estaPressionando: boolean = false;
-
-btnConfig.addEventListener('click', () => {
-  const cargaMs = obterCargaHoraria();
-  const horas = Math.floor(cargaMs / (60 * 60 * 1000));
-  const minutos = Math.floor((cargaMs % (60 * 60 * 1000)) / (60 * 1000));
-  inputHorasCarga.value = horas.toString();
-  inputMinutosCarga.value = minutos.toString();
-  modalConfig.showModal();
-});
-
-btnCancelarConfig.addEventListener('click', () => {
-  modalConfig.close();
-});
-
-formConfig.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const horas = parseInt(inputHorasCarga.value || '0', 10);
-  const minutos = parseInt(inputMinutosCarga.value || '0', 10);
-  const cargaMs = (horas * 60 * 60 * 1000) + (minutos * 60 * 1000);
-
-  localStorage.setItem('cargaHoraria', cargaMs.toString());
-  modalConfig.close();
-  atualizarInterface();
-});
-
-// --- LÓGICA DE TRANSIÇÃO DE ESTADO ---
-async function alternarEstadoPonto(): Promise<void> {
-  const agora: number = Date.now();
-  const dadosParaArquivar = { ...dadosPonto };
-
-  switch (dadosPonto.estado) {
-    case 0:
-      dadosPonto.estado = 1;
-      dadosPonto.inicioDia = agora;
-      break;
-    case 1:
-      dadosPonto.estado = 2;
-      dadosPonto.inicioAlmoco = agora;
-      break;
-    case 2:
-      dadosPonto.estado = 3;
-      dadosPonto.fimAlmoco = agora;
-      break;
-    case 3:
-      await arquivarRegistroNoHistorico(dadosParaArquivar);
-      dadosPonto = {
-        estado: 0,
-        inicioDia: null,
-        inicioAlmoco: null,
-        fimAlmoco: null,
-      };
-      break;
+    DadosPonto,
+    arquivarRegistroNoHistorico,
+    salvarEstado,
+    carregarEstado,
+    obterCargaHoraria,
+  } from "./registros.js";
+  import { applyLongPress } from "./utils/long-press.js";
+  
+  // SCRIPT: Bloquear retorno para index.html pelo histórico do navegador
+  history.pushState(null, document.title, location.href);
+  window.addEventListener('popstate', function () {
+    history.pushState(null, document.title, location.href);
+  });
+  
+  const TEMPO_ALMOCO: number = 1 * 60 * 60 * 1000;
+  
+  let dadosPonto: DadosPonto = {
+    estado: 0,
+    inicioDia: null,
+    inicioAlmoco: null,
+    fimAlmoco: null,
+  };
+  
+  const splashScreen = document.getElementById("splashScreen") as HTMLDivElement;
+  const btnPonto = document.getElementById("btnPonto") as HTMLButtonElement;
+  const btnCancelarDia = document.getElementById("btnCancelarDia") as HTMLButtonElement;
+  
+  const clockDisplay = document.getElementById("clockDisplay") as HTMLDivElement;
+  const statusDisplay = document.getElementById("statusDisplay") as HTMLDivElement;
+  const countdownDisplay = document.getElementById("countdownDisplay") as HTMLDivElement;
+  
+  const estadoDropdown = document.getElementById("estadoDropdown") as HTMLSelectElement;
+  const btnEditarHoje = document.getElementById("btnEditarHoje") as HTMLButtonElement;
+  const modalEdicaoHoje = document.getElementById("modalEdicaoHoje") as HTMLDialogElement;
+  const formEdicaoHoje = document.getElementById("formEdicaoHoje") as HTMLFormElement;
+  const inputEntradaHoje = document.getElementById("inputEntradaHoje") as HTMLInputElement;
+  const inputSaidaAlmocoHoje = document.getElementById("inputSaidaAlmocoHoje") as HTMLInputElement;
+  const inputRetornoAlmocoHoje = document.getElementById("inputRetornoAlmocoHoje") as HTMLInputElement;
+  const btnCancelarEdicaoHoje = document.getElementById("btnCancelarEdicaoHoje") as HTMLButtonElement;
+  
+  const btnConfig = document.querySelector('.btn-config') as HTMLButtonElement;
+  const modalConfig = document.getElementById('modalConfig') as HTMLDialogElement;
+  const formConfig = document.getElementById('formConfig') as HTMLFormElement;
+  const inputHorasCarga = document.getElementById('inputHorasCarga') as HTMLInputElement;
+  const inputMinutosCarga = document.getElementById('inputMinutosCarga') as HTMLInputElement;
+  const btnCancelarConfig = document.getElementById('btnCancelarConfig') as HTMLButtonElement;
+  
+  btnConfig.addEventListener('click', () => {
+    const cargaMs = obterCargaHoraria();
+    const horas = Math.floor(cargaMs / (60 * 60 * 1000));
+    const minutos = Math.floor((cargaMs % (60 * 60 * 1000)) / (60 * 1000));
+    inputHorasCarga.value = horas.toString();
+    inputMinutosCarga.value = minutos.toString();
+    modalConfig.showModal();
+  });
+  
+  btnCancelarConfig.addEventListener('click', () => {
+    modalConfig.close();
+  });
+  
+  formConfig.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const horas = parseInt(inputHorasCarga.value || '0', 10);
+    const minutos = parseInt(inputMinutosCarga.value || '0', 10);
+    const cargaMs = (horas * 60 * 60 * 1000) + (minutos * 60 * 1000);
+  
+    localStorage.setItem('cargaHoraria', cargaMs.toString());
+    modalConfig.close();
+    atualizarInterface();
+  });
+  
+  // --- LÓGICA DE TRANSIÇÃO DE ESTADO ---
+  async function alternarEstadoPonto(): Promise<void> {
+    const agora: number = Date.now();
+    const dadosParaArquivar = { ...dadosPonto };
+  
+    switch (dadosPonto.estado) {
+      case 0:
+        dadosPonto.estado = 1;
+        dadosPonto.inicioDia = agora;
+        break;
+      case 1:
+        dadosPonto.estado = 2;
+        dadosPonto.inicioAlmoco = agora;
+        break;
+      case 2:
+        dadosPonto.estado = 3;
+        dadosPonto.fimAlmoco = agora;
+        break;
+      case 3:
+        await arquivarRegistroNoHistorico(dadosParaArquivar);
+        dadosPonto = { estado: 0, inicioDia: null, inicioAlmoco: null, fimAlmoco: null };
+        break;
+    }
+    
+    await salvarEstado(dadosPonto);
+    executarFeedbackHaptico();
+    atualizarInterface();
   }
   
-  await salvarEstado(dadosPonto);
-  executarFeedbackHaptico();
-  atualizarInterface();
-}
-
-// --- CONTROLES DO DROPDOWN E MODAL ---
-estadoDropdown.addEventListener("change", async () => {
-  const novoEstado = parseInt(estadoDropdown.value, 10);
-  const agora = Date.now();
-
-  // Se avançar estados, preenche tempos vazios com o momento atual
-  if (novoEstado >= 1 && !dadosPonto.inicioDia) dadosPonto.inicioDia = agora;
-  if (novoEstado >= 2 && !dadosPonto.inicioAlmoco) dadosPonto.inicioAlmoco = agora;
-  if (novoEstado >= 3 && !dadosPonto.fimAlmoco) dadosPonto.fimAlmoco = agora;
-
-  dadosPonto.estado = novoEstado;
-  await salvarEstado(dadosPonto);
-  atualizarInterface();
-});
-
-btnEditarHoje.addEventListener("click", () => {
-  inputEntradaHoje.value = extrairHora(dadosPonto.inicioDia);
-  inputSaidaAlmocoHoje.value = extrairHora(dadosPonto.inicioAlmoco);
-  inputRetornoAlmocoHoje.value = extrairHora(dadosPonto.fimAlmoco);
-  modalEdicaoHoje.showModal();
-});
-
-btnCancelarEdicaoHoje.addEventListener("click", () => {
-  modalEdicaoHoje.close();
-});
-
-formEdicaoHoje.addEventListener("submit", async (e) => {
-  e.preventDefault();
+  async function cancelarDiaAtual(): Promise<void> {
+    dadosPonto = { estado: 0, inicioDia: null, inicioAlmoco: null, fimAlmoco: null };
+    await salvarEstado(dadosPonto);
+    executarFeedbackHaptico();
+    atualizarInterface();
+  }
   
-  dadosPonto.inicioDia = converterHoraParaTimestampHoje(inputEntradaHoje.value);
-  dadosPonto.inicioAlmoco = converterHoraParaTimestampHoje(inputSaidaAlmocoHoje.value);
-  dadosPonto.fimAlmoco = converterHoraParaTimestampHoje(inputRetornoAlmocoHoje.value);
-
-  await salvarEstado(dadosPonto);
-  atualizarInterface();
-  modalEdicaoHoje.close();
-});
-
-// --- FUNÇÕES DE TEMPO E FORMATAÇÃO ---
-function formatarTempo(ms: number): string {
-  const totalSegundos: number = Math.floor(Math.abs(ms) / 1000);
-  const horas: number = Math.floor(totalSegundos / 3600);
-  const minutos: number = Math.floor((totalSegundos % 3600) / 60);
-  const segundos: number = totalSegundos % 60;
-  return `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}:${String(segundos).padStart(2, "0")}`;
-}
-
-function extrairHora(timestamp: number | null): string {
-  if (!timestamp) return "";
-  const data = new Date(timestamp);
-  return `${String(data.getHours()).padStart(2, "0")}:${String(data.getMinutes()).padStart(2, "0")}`;
-}
-
-function converterHoraParaTimestampHoje(horaStr: string): number | null {
-  if (!horaStr) return null;
-  const [hora, minuto] = horaStr.split(":");
-  const data = new Date();
-  data.setHours(Number(hora), Number(minuto), 0, 0);
-  return data.getTime();
-}
-
-function exibirContagemRegressivaOuExtra(tempoRestante: number): void {
-  if (tempoRestante >= 0) {
-    countdownDisplay.textContent = `Restam ${formatarTempo(tempoRestante)}`;
-    countdownDisplay.style.color = "var(--primary-color)";
-  } else {
-    countdownDisplay.textContent = `Extra: +${formatarTempo(tempoRestante)}`;
-    countdownDisplay.style.color = "var(--accent-color)";
+  // --- CONTROLES DO DROPDOWN E MODAL ---
+  estadoDropdown.addEventListener("change", async () => {
+    const novoEstado = parseInt(estadoDropdown.value, 10);
+    const agora = Date.now();
+  
+    if (novoEstado >= 1 && !dadosPonto.inicioDia) dadosPonto.inicioDia = agora;
+    if (novoEstado >= 2 && !dadosPonto.inicioAlmoco) dadosPonto.inicioAlmoco = agora;
+    if (novoEstado >= 3 && !dadosPonto.fimAlmoco) dadosPonto.fimAlmoco = agora;
+  
+    dadosPonto.estado = novoEstado;
+    await salvarEstado(dadosPonto);
+    atualizarInterface();
+  });
+  
+  btnEditarHoje.addEventListener("click", () => {
+    inputEntradaHoje.value = extrairHora(dadosPonto.inicioDia);
+    inputSaidaAlmocoHoje.value = extrairHora(dadosPonto.inicioAlmoco);
+    inputRetornoAlmocoHoje.value = extrairHora(dadosPonto.fimAlmoco);
+    modalEdicaoHoje.showModal();
+  });
+  
+  btnCancelarEdicaoHoje.addEventListener("click", () => {
+    modalEdicaoHoje.close();
+  });
+  
+  formEdicaoHoje.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    dadosPonto.inicioDia = converterHoraParaTimestampHoje(inputEntradaHoje.value);
+    dadosPonto.inicioAlmoco = converterHoraParaTimestampHoje(inputSaidaAlmocoHoje.value);
+    dadosPonto.fimAlmoco = converterHoraParaTimestampHoje(inputRetornoAlmocoHoje.value);
+  
+    await salvarEstado(dadosPonto);
+    atualizarInterface();
+    modalEdicaoHoje.close();
+  });
+  
+  // --- FUNÇÕES DE TEMPO E FORMATAÇÃO ---
+  function formatarTempo(ms: number): string {
+    const totalSegundos: number = Math.floor(Math.abs(ms) / 1000);
+    const horas: number = Math.floor(totalSegundos / 3600);
+    const minutos: number = Math.floor((totalSegundos % 3600) / 60);
+    const segundos: number = totalSegundos % 60;
+    return `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}:${String(segundos).padStart(2, "0")}`;
   }
-}
-
-function atualizarInterface(): void {
-  const agora: Date = new Date();
-  const agoraMs: number = agora.getTime();
-
-  // Sincroniza visualmente o select com o estado atual do banco
-  if (estadoDropdown.value !== dadosPonto.estado.toString()) {
-    estadoDropdown.value = dadosPonto.estado.toString();
+  
+  function extrairHora(timestamp: number | null): string {
+    if (!timestamp) return "";
+    const data = new Date(timestamp);
+    return `${String(data.getHours()).padStart(2, "0")}:${String(data.getMinutes()).padStart(2, "0")}`;
   }
-
-  if (dadosPonto.estado !== 2) {
-    clockDisplay.textContent = agora.toTimeString().split(" ")[0];
+  
+  function converterHoraParaTimestampHoje(horaStr: string): number | null {
+    if (!horaStr) return null;
+    const [hora, minuto] = horaStr.split(":");
+    const data = new Date();
+    data.setHours(Number(hora), Number(minuto), 0, 0);
+    return data.getTime();
   }
-
-  switch (dadosPonto.estado) {
-    case 0:
-      statusDisplay.textContent = "Segure para iniciar o dia";
-      countdownDisplay.textContent = "Carga: 08:00:00";
+  
+  function exibirContagemRegressivaOuExtra(tempoRestante: number): void {
+    if (tempoRestante >= 0) {
+      countdownDisplay.textContent = `Restam ${formatarTempo(tempoRestante)}`;
       countdownDisplay.style.color = "var(--primary-color)";
-      break;
-
-    case 1:
-      statusDisplay.textContent = "Trabalhando (Turno 1)";
-      if (dadosPonto.inicioDia) {
-        const tempoDecorrido1 = agoraMs - dadosPonto.inicioDia;
-        const restante1 = obterCargaHoraria() - tempoDecorrido1;
-        exibirContagemRegressivaOuExtra(restante1);
-      }
-      break;
-
-    case 2:
-      statusDisplay.textContent = "Intervalo de Almoço";
-      if (dadosPonto.inicioAlmoco) {
-        const tempoAlmocoDecorrido = agoraMs - dadosPonto.inicioAlmoco;
-        const restanteAlmoco = TEMPO_ALMOCO - tempoAlmocoDecorrido;
-
-        if (restanteAlmoco >= 0) {
-          clockDisplay.textContent = formatarTempo(restanteAlmoco);
-          countdownDisplay.textContent = "Aproveite o descanso";
-          countdownDisplay.style.color = "var(--text-secondary)";
-        } else {
-          clockDisplay.textContent = formatarTempo(restanteAlmoco);
-          countdownDisplay.textContent = `Almoço estourado: +${formatarTempo(tempoAlmocoDecorrido - TEMPO_ALMOCO)}`;
-          countdownDisplay.style.color = "var(--alert-color)";
+    } else {
+      countdownDisplay.textContent = `Extra: +${formatarTempo(tempoRestante)}`;
+      countdownDisplay.style.color = "var(--accent-color)";
+    }
+  }
+  
+  function atualizarInterface(): void {
+    const agora: Date = new Date();
+    const agoraMs: number = agora.getTime();
+  
+    if (estadoDropdown.value !== dadosPonto.estado.toString()) {
+      estadoDropdown.value = dadosPonto.estado.toString();
+    }
+  
+    // Alterna a exibição do botão de cancelar o dia atual
+    btnCancelarDia.style.display = dadosPonto.estado > 0 ? "block" : "none";
+  
+    if (dadosPonto.estado !== 2) {
+      clockDisplay.textContent = agora.toTimeString().split(" ")[0];
+    }
+  
+    switch (dadosPonto.estado) {
+      case 0:
+        statusDisplay.textContent = "Segure para iniciar o dia";
+        countdownDisplay.textContent = `Carga: ${formatarTempo(obterCargaHoraria())}`;
+        countdownDisplay.style.color = "var(--primary-color)";
+        break;
+  
+      case 1:
+        statusDisplay.textContent = "Trabalhando (Turno 1)";
+        if (dadosPonto.inicioDia) {
+          const tempoDecorrido1 = agoraMs - dadosPonto.inicioDia;
+          const restante1 = obterCargaHoraria() - tempoDecorrido1;
+          exibirContagemRegressivaOuExtra(restante1);
         }
-      }
-      break;
-
-    case 3:
-      statusDisplay.textContent = "Trabalhando (Turno 2)";
-      if (dadosPonto.inicioDia && dadosPonto.inicioAlmoco && dadosPonto.fimAlmoco) {
-        const tempoTrabalhadoTurno1 = dadosPonto.inicioAlmoco - dadosPonto.inicioDia;
-        const tempoTrabalhadoTurno2 = agoraMs - dadosPonto.fimAlmoco;
-        const totalTrabalhado = tempoTrabalhadoTurno1 + tempoTrabalhadoTurno2;
-        const restante2 = obterCargaHoraria() - totalTrabalhado;
-        exibirContagemRegressivaOuExtra(restante2);
-      } else if (dadosPonto.inicioDia) {
-        // Fallback caso não haja almoço registrado
-        const tempoTotalTrabalhadoDireto = agoraMs - dadosPonto.inicioDia;
-        const restanteSemAlmoco = obterCargaHoraria() - tempoTotalTrabalhadoDireto;
-        exibirContagemRegressivaOuExtra(restanteSemAlmoco);
-      }
-      break;
+        break;
+  
+      case 2:
+        statusDisplay.textContent = "Intervalo de Almoço";
+        if (dadosPonto.inicioAlmoco) {
+          const tempoAlmocoDecorrido = agoraMs - dadosPonto.inicioAlmoco;
+          const restanteAlmoco = TEMPO_ALMOCO - tempoAlmocoDecorrido;
+  
+          if (restanteAlmoco >= 0) {
+            clockDisplay.textContent = formatarTempo(restanteAlmoco);
+            countdownDisplay.textContent = "Aproveite o descanso";
+            countdownDisplay.style.color = "var(--text-secondary)";
+          } else {
+            clockDisplay.textContent = formatarTempo(restanteAlmoco);
+            countdownDisplay.textContent = `Almoço estourado: +${formatarTempo(tempoAlmocoDecorrido - TEMPO_ALMOCO)}`;
+            countdownDisplay.style.color = "var(--alert-color)";
+          }
+        }
+        break;
+  
+      case 3:
+        statusDisplay.textContent = "Trabalhando (Turno 2)";
+        if (dadosPonto.inicioDia && dadosPonto.inicioAlmoco && dadosPonto.fimAlmoco) {
+          const tempoTrabalhadoTurno1 = dadosPonto.inicioAlmoco - dadosPonto.inicioDia;
+          const tempoTrabalhadoTurno2 = agoraMs - dadosPonto.fimAlmoco;
+          const totalTrabalhado = tempoTrabalhadoTurno1 + tempoTrabalhadoTurno2;
+          const restante2 = obterCargaHoraria() - totalTrabalhado;
+          exibirContagemRegressivaOuExtra(restante2);
+        } else if (dadosPonto.inicioDia) {
+          const tempoTotalTrabalhadoDireto = agoraMs - dadosPonto.inicioDia;
+          const restanteSemAlmoco = obterCargaHoraria() - tempoTotalTrabalhadoDireto;
+          exibirContagemRegressivaOuExtra(restanteSemAlmoco);
+        }
+        break;
+    }
   }
-}
-
-// --- LOGICA DO PRESSIONAMENTO DE 1.5 SEGUNDOS ---
-function iniciarPressao(e: Event): void {
-  if (estaPressionando) return;
-  e.preventDefault();
-  estaPressionando = true;
-  btnPonto.classList.add("pressing");
-
-  temporizadorPressao = setTimeout(async () => {
-    await alternarEstadoPonto();
-    finalizarPressao();
-  }, 1500); 
-}
-
-function finalizarPressao(): void {
-  if (!estaPressionando) return;
-  estaPressionando = false;
-  btnPonto.classList.remove("pressing");
-  if (temporizadorPressao) {
-    clearTimeout(temporizadorPressao);
-    temporizadorPressao = null;
+  
+  function executarFeedbackHaptico(): void {
+    if (navigator.vibrate) {
+      navigator.vibrate([100, 50, 100]);
+    }
   }
-}
-
-function executarFeedbackHaptico(): void {
-  if (navigator.vibrate) {
-    navigator.vibrate([100, 50, 100]);
-  }
-}
-
-// Ouvintes de Eventos
-btnPonto.addEventListener("mousedown", iniciarPressao);
-btnPonto.addEventListener("mouseup", finalizarPressao);
-btnPonto.addEventListener("mouseleave", finalizarPressao);
-
-btnPonto.addEventListener("touchstart", iniciarPressao, { passive: false });
-btnPonto.addEventListener("touchend", finalizarPressao);
-btnPonto.addEventListener("touchcancel", finalizarPressao);
-
-carregarEstado().then((estadoSalvo) => {
-  dadosPonto = estadoSalvo;
-  setInterval(atualizarInterface, 1000);
-  atualizarInterface();
-});
+  
+  // Utilizando o módulo modularizado de long-press
+  applyLongPress(
+    btnPonto,
+    1500,
+    alternarEstadoPonto,
+    undefined, // sem clique simples
+    () => btnPonto.classList.add("pressing"),
+    () => btnPonto.classList.remove("pressing")
+  );
+  
+  applyLongPress(
+    btnCancelarDia,
+    3000,
+    cancelarDiaAtual,
+    undefined,
+    () => btnCancelarDia.classList.add("pressing"),
+    () => btnCancelarDia.classList.remove("pressing")
+  );
+  
+  // Carrega estado e remove Splash Screen
+  carregarEstado().then((estadoSalvo) => {
+    dadosPonto = estadoSalvo;
+    setInterval(atualizarInterface, 1000);
+    atualizarInterface();
+    
+    // Suaviza a transição de remoção do splash screen
+    setTimeout(() => {
+        splashScreen.style.opacity = '0';
+        splashScreen.style.visibility = 'hidden';
+    }, 500);
+  });
