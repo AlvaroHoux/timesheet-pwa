@@ -42,16 +42,13 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  transition:
-    opacity 0.5s ease,
-    visibility 0.5s ease;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
 }
 
 .splash-icon {
   width: 120px;
   height: 120px;
   margin-bottom: 20px;
-  border-radius: 50%;
   animation: pulse 1.5s infinite;
 }
 
@@ -63,27 +60,16 @@ body {
 }
 
 @keyframes pulse {
-  0% {
-    transform: scale(0.95);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(0.95);
-    opacity: 0.8;
-  }
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
 }
 
 /* Área do Botão Principal */
 .main-button-container {
   flex: 8;
   display: flex;
-  flex-direction: column; /* Permite empilhar botão de cancelar */
   position: relative;
-  gap: 15px;
 }
 
 .btn-ponto {
@@ -159,47 +145,47 @@ body {
   font-weight: 600;
 }
 
-/* --- Botão Cancelar Dia --- */
+/* --- Botão Cancelar Dia (Versão 5.1: Sobreposto no canto superior direito) --- */
 .btn-cancelar-dia {
-  background-color: transparent;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 52px;
+  height: 52px;
+  background-color: rgba(18, 18, 18, 0.8);
   color: var(--alert-color);
-  border: 1px dashed var(--alert-color);
-  border-radius: 12px;
-  padding: 12px;
-  font-size: 1rem;
-  font-weight: bold;
+  border: 1px solid var(--alert-color);
+  border-radius: 50%;
+  font-size: 1.4rem;
   cursor: pointer;
-  display: none; /* Só exibido via JS se estado > 0 */
-  position: relative;
+  display: none; /* JS altera para flex para manter o alinhamento */
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
   overflow: hidden;
-  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   transition: transform 0.1s;
 }
 
 .btn-cancelar-dia:active {
-  transform: scale(0.98);
+  transform: scale(0.92);
 }
 
+/* Efeito de preenchimento vertical (de baixo para cima) adaptado para o botão redondo */
 .btn-cancelar-dia::before {
   content: "";
   position: absolute;
+  bottom: 0;
   left: 0;
-  top: 0;
-  height: 100%;
-  width: 0%;
-  background-color: rgba(207, 102, 121, 0.2);
-  transition: width 3s linear; /* Tempo de 3s conforme solicitado */
+  width: 100%;
+  height: 0%;
+  background-color: rgba(207, 102, 121, 0.25);
+  transition: height 3s linear;
   z-index: 1;
 }
 
 .btn-cancelar-dia.pressing::before {
-  width: 100%;
-}
-
-.btn-cancelar-dia span {
-  position: relative;
-  z-index: 2;
-  pointer-events: none;
+  height: 100%;
 }
 
 .btn-historico {
@@ -228,11 +214,11 @@ body {
 .btn-config {
   width: 120px;
   padding: 0;
-  font-size: 1.4rem;
   background-color: var(--surface-color);
   border: 1px solid #2d2d2d;
   border-radius: 20px;
   color: var(--text-color);
+  font-size: 1.6rem;
   cursor: pointer;
   display: flex;
   align-items: center;
