@@ -99,6 +99,8 @@ main {
   align-items: center;
   cursor: pointer;
   transition: background-color 0.2s;
+  position: relative; /* Necessário para ancoragem da barra absoluta */
+  overflow: hidden;
 }
 
 .registro-card:hover {
@@ -125,6 +127,53 @@ main {
 .registro-saldo {
   font-size: 1.2rem;
   font-weight: bold;
+}
+
+/* --- Lógica Visual de Exclusão (Versão 5.1) --- */
+
+/* Barra de carregamento vermelha na base interna do card */
+.registro-card::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  width: 0%;
+  background-color: var(--alert-color);
+  z-index: 5;
+  transition: none;
+}
+
+.registro-card.deleting::before {
+  width: 100%;
+  transition: width 3s linear; /* Carregamento linear de 3s */
+}
+
+/* Texto dinâmico injetado via JS */
+.msg-excluir-countdown {
+  font-size: 0.85rem;
+  color: var(--alert-color);
+  font-weight: bold;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Animação que começa suave e ganha força/frequência conforme atinge 100% dos 3s */
+@keyframes intenseShake {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-0.5px, 0.5px) rotate(-0.2deg); }
+  20% { transform: translate(-0.5px, -0.5px) rotate(0.2deg); }
+  40% { transform: translate(1.5px, -1px) rotate(-0.5deg); }
+  50% { transform: translate(-2px, 1.5px) rotate(1deg); }
+  65% { transform: translate(-3px, 2px) rotate(-1.5deg); }
+  80% { transform: translate(3.5px, -2px) rotate(2deg); }
+  90% { transform: translate(-4px, 3px) rotate(-2.5deg); }
+  100% { transform: translate(4.5px, -3px) rotate(3deg); }
+}
+
+.registro-card.deleting {
+  animation: intenseShake 0.3s infinite linear;
+  border-color: var(--alert-color);
 }
 
 /* Botão Flutuante */

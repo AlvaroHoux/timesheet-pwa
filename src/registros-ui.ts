@@ -90,7 +90,7 @@ function converterStringCompensacaoParaMs(str: string): number {
 
 function executarFeedbackExclusao(): void {
     if (navigator.vibrate) {
-        navigator.vibrate([100, 200, 100]); // Vibração distinta para alertas irreversíveis
+        navigator.vibrate([100, 200, 100]);
     }
 }
 
@@ -113,10 +113,10 @@ async function carregarEExibirRegistros(): Promise<void> {
         card.className = 'registro-card';
 
         if (registro.isCompensacao) {
+            // Removido texto estático conforme solicitado
             card.innerHTML = `
                 <div class="registro-info">
                     <span class="registro-data">Compensação (${registro.data})</span>
-                    <span class="registro-tempos">Segure 3s para deletar</span>
                 </div>
                 <div class="registro-saldo ${classeSaldo}">${strSaldo}</div>
             `;
@@ -131,22 +131,48 @@ async function carregarEExibirRegistros(): Promise<void> {
             `;
         }
         
-        // Aplicação do componente modular: Clique curto para editar, Segurar (3s) para remover
+        let countdownInterval: ReturnType<typeof setInterval> | null = null;
+        let segundosRestantes = 3;
+
         applyLongPress(
             card,
             3000,
             async () => {
-                // Ação ao segurar 3s (Exclusão)
+                if (countdownInterval) clearInterval(countdownInterval);
                 executarFeedbackExclusao();
                 await removerRegistroDoHistorico(registro.id);
-                await carregarEExibirRegistros(); // Recarrega a tela
+                await carregarEExibirRegistros();
             },
             () => {
-                // Ação do Clique Simples (Edição)
                 abrirModalEdicao(registro);
             },
-            () => card.style.opacity = '0.5', // Start
-            () => card.style.opacity = '1'    // Cancel
+            () => {
+                card.classList.add("deleting");
+                segundosRestantes = 3;
+                
+                const infoDiv = card.querySelector('.registro-info');
+                const msg = document.createElement('span');
+                msg.className = 'msg-excluir-countdown';
+                msg.textContent = `Segure por mais ${segundosRestantes} segundos para excluir o registro`;
+                infoDiv?.appendChild(msg);
+
+                // Gerencia o decremento textual segundo a segundo em sincronia com os 3000ms
+                countdownInterval = setInterval(() => {
+                    segundosRestantes--;
+                    if (segundosRestantes > 0) {
+                        msg.textContent = `Segure por mais ${segundosRestantes} segundos para excluir o registro`;
+                    }
+                }, 1000);
+            },
+            () => {
+                card.classList.remove("deleting");
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+                const msg = card.querySelector('.msg-excluir-countdown');
+                msg?.remove();
+            }
         );
 
         listaRegistros.appendChild(card);
