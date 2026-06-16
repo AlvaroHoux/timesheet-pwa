@@ -29,11 +29,60 @@ body {
   gap: 20px;
 }
 
-/* Área do Botão Principal (80% da Altura) */
+/* --- Splash Screen --- */
+#splashScreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition:
+    opacity 0.5s ease,
+    visibility 0.5s ease;
+}
+
+.splash-icon {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 20px;
+  animation: pulse 1.5s infinite;
+}
+
+.splash-title {
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+/* Área do Botão Principal */
 .main-button-container {
   flex: 8;
   display: flex;
+  flex-direction: column; /* Permite empilhar botão de cancelar */
   position: relative;
+  gap: 15px;
 }
 
 .btn-ponto {
@@ -67,7 +116,6 @@ body {
   width: 100%;
 }
 
-/* Efeito de preenchimento ao segurar o botão */
 .btn-ponto::before {
   content: "";
   position: absolute;
@@ -84,7 +132,6 @@ body {
   height: 100%;
 }
 
-/* Garante que o texto fique sempre acima do efeito visual */
 .btn-ponto * {
   z-index: 2;
   pointer-events: none;
@@ -111,8 +158,51 @@ body {
   font-weight: 600;
 }
 
+/* --- Botão Cancelar Dia --- */
+.btn-cancelar-dia {
+  background-color: transparent;
+  color: var(--alert-color);
+  border: 1px dashed var(--alert-color);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: none; /* Só exibido via JS se estado > 0 */
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  transition: transform 0.1s;
+}
+
+.btn-cancelar-dia:active {
+  transform: scale(0.98);
+}
+
+.btn-cancelar-dia::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0%;
+  background-color: rgba(207, 102, 121, 0.2);
+  transition: width 3s linear; /* Tempo de 3s conforme solicitado */
+  z-index: 1;
+}
+
+.btn-cancelar-dia.pressing::before {
+  width: 100%;
+}
+
+.btn-cancelar-dia span {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+
 .btn-historico {
-  flex: 1; /* Mudou de 9 para 1 para preencher tudo fluidamente */
+  flex: 1;
   background-color: var(--surface-color);
   border: 1px solid #2d2d2d;
   border-radius: 20px;
@@ -135,14 +225,13 @@ body {
 }
 
 .btn-config {
-  width: 120px; /* Define uma largura fixa pequena */
-  padding: 0; /* Ajuste o padding se necessário */
-  font-size: 1.4rem; /* Um pouco menor para não pesar visualmente */
+  width: 120px;
+  padding: 0;
+  font-size: 1.4rem;
   background-color: var(--surface-color);
   border: 1px solid #2d2d2d;
   border-radius: 20px;
   color: var(--text-color);
-  font-size: 1.6rem;
   cursor: pointer;
   display: flex;
   align-items: center;

@@ -19,6 +19,15 @@
     <link rel="stylesheet" href="../styles/modal.css" />
   </head>
   <body>
+    <div id="splashScreen">
+      <img
+        src="../assets/icon-192x192.png"
+        alt="Logo Meu Ponto"
+        class="splash-icon"
+      />
+      <div class="splash-title">Iniciando Ponto...</div>
+    </div>
+
     <div class="top-bar">
       <select id="estadoDropdown" class="estado-dropdown">
         <option value="0">Não Iniciado</option>
@@ -40,6 +49,10 @@
         <div id="clockDisplay" class="clock-display">00:00:00</div>
         <div id="statusDisplay" class="status-display">Carregando...</div>
         <div id="countdownDisplay" class="countdown-display">--:--:--</div>
+      </button>
+
+      <button id="btnCancelarDia" class="btn-cancelar-dia">
+        <span>🗑️ Segure por 3s para cancelar o dia atual</span>
       </button>
     </div>
 
