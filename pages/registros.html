@@ -37,6 +37,16 @@
       </div>
     </header>
 
+    <div class="filtros-container">
+      <label for="selectOrdenacao">Ordenar por:</label>
+      <select id="selectOrdenacao">
+        <option value="data-desc">Data (Mais recente)</option>
+        <option value="data-asc">Data (Mais antiga)</option>
+        <option value="horas-desc">Saldo (Maior para menor)</option>
+        <option value="horas-asc">Saldo (Menor para maior)</option>
+      </select>
+    </div>
+
     <main id="listaRegistros"></main>
 
     <button class="fab" id="btnNovoRegistro">+</button>

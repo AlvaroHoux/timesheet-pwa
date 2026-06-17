@@ -81,6 +81,32 @@ header {
   color: var(--alert-color);
 }
 
+/* Filtros */
+.filtros-container {
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: var(--bg-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.filtros-container label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.filtros-container select {
+  flex: 1;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+}
+
 /* Lista de Registros */
 main {
   flex: 1;

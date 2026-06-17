@@ -7,12 +7,13 @@ const dataAtualSubtitulo = document.getElementById('dataAtualSubtitulo') as HTML
 const saldoTotalHeader = document.getElementById('saldoTotalHeader') as HTMLElement;
 const listaRegistros = document.getElementById('listaRegistros') as HTMLElement;
 
-// Elementos do Modal
+// Elementos do Modal e Filtros
 const registroModal = document.getElementById('registroModal') as HTMLDialogElement;
 const registroForm = document.getElementById('registroForm') as HTMLFormElement;
 const btnNovoRegistro = document.getElementById('btnNovoRegistro') as HTMLButtonElement;
 const btnCancelarModal = document.getElementById('btnCancelarModal') as HTMLButtonElement;
 const modalTitulo = document.getElementById('modalTitulo') as HTMLDivElement;
+const selectOrdenacao = document.getElementById('selectOrdenacao') as HTMLSelectElement;
 
 // Inputs do Modal
 const inputTipoRegistro = document.getElementById('inputTipoRegistro') as HTMLSelectElement;
@@ -94,13 +95,33 @@ function executarFeedbackExclusao(): void {
     }
 }
 
+function parseDataPtBrParaTimestamp(dataStr: string): number {
+    const [dia, mes, ano] = dataStr.split('/');
+    return new Date(Number(ano), Number(mes) - 1, Number(dia)).getTime();
+}
+
 // --- RENDERIZAÇÃO ---
 async function carregarEExibirRegistros(): Promise<void> {
     const historico = await obterHistoricoCompleto();
     listaRegistros.innerHTML = '';
     let saldoGeralMs = 0;
 
-    historico.sort((a, b) => b.id - a.id);
+    const ordenacao = selectOrdenacao.value;
+
+    historico.sort((a, b) => {
+        if (ordenacao.startsWith('data')) {
+            const timeA = parseDataPtBrParaTimestamp(a.data);
+            const timeB = parseDataPtBrParaTimestamp(b.data);
+            if (timeA === timeB) {
+                return ordenacao === 'data-desc' ? b.id - a.id : a.id - b.id;
+            }
+            return ordenacao === 'data-desc' ? timeB - timeA : timeA - timeB;
+        } else {
+            const saldoA = calcularSaldoRegistro(a);
+            const saldoB = calcularSaldoRegistro(b);
+            return ordenacao === 'horas-desc' ? saldoB - saldoA : saldoA - saldoB;
+        }
+    });
 
     historico.forEach(registro => {
         const saldoDia = calcularSaldoRegistro(registro);
@@ -113,7 +134,6 @@ async function carregarEExibirRegistros(): Promise<void> {
         card.className = 'registro-card';
 
         if (registro.isCompensacao) {
-            // Removido texto estático conforme solicitado
             card.innerHTML = `
                 <div class="registro-info">
                     <span class="registro-data">Compensação (${registro.data})</span>
@@ -265,6 +285,7 @@ registroForm.addEventListener('submit', async (e) => {
 
 btnNovoRegistro.addEventListener('click', abrirModalNovo);
 btnCancelarModal.addEventListener('click', () => registroModal.close());
+selectOrdenacao.addEventListener('change', carregarEExibirRegistros);
 
 // Execução inicial
 inicializarCabecalho();
