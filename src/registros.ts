@@ -156,3 +156,99 @@ export async function removerRegistroDoHistorico(id: number): Promise<void> {
     request.onerror = () => reject(request.error);
   });
 }
+
+function formatarHoraCSV(timestamp: number | null): string {
+  if (!timestamp) return "";
+  const d = new Date(timestamp);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatarSaldoCSV(saldoMs: number): string {
+  const sinal = saldoMs >= 0 ? "+" : "-";
+  const abs = Math.abs(saldoMs);
+  const h = Math.floor(abs / 3600000);
+  const m = Math.floor((abs % 3600000) / 60000);
+  return `${sinal}${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function calcularSaldoCSV(registro: RegistroHistorico, cargaHoraria: number): number {
+  if (registro.isCompensacao && registro.saldoCompensacao !== undefined) {
+    return registro.saldoCompensacao;
+  }
+  if (!registro.entrada || !registro.saidaDia) return 0;
+  let trabalhado = 0;
+  if (registro.saidaAlmoco && registro.retornoAlmoco) {
+    trabalhado += registro.saidaAlmoco - registro.entrada;
+    trabalhado += registro.saidaDia - registro.retornoAlmoco;
+  } else {
+    trabalhado += registro.saidaDia - registro.entrada;
+  }
+  return trabalhado - cargaHoraria;
+}
+
+export async function exportarHistoricoCSV(): Promise<void> {
+  const historico = await obterHistoricoCompleto();
+  const cargaHoraria = obterCargaHoraria();
+
+  // Ordena por data crescente antes de exportar
+  historico.sort((a, b) => {
+    const toMs = (d: string) => {
+      const [dd, mm, yyyy] = d.split("/");
+      return new Date(Number(yyyy), Number(mm) - 1, Number(dd)).getTime();
+    };
+    const diff = toMs(a.data) - toMs(b.data);
+    return diff !== 0 ? diff : a.id - b.id;
+  });
+
+  const cabecalho = ["Data", "Tipo", "Entrada", "Saída Almoço", "Retorno Almoço", "Saída", "Saldo"];
+  const linhas: string[][] = [cabecalho];
+
+  let saldoAcumuladoMs = 0;
+
+  for (const reg of historico) {
+    const saldo = calcularSaldoCSV(reg, cargaHoraria);
+    saldoAcumuladoMs += saldo;
+
+    if (reg.isCompensacao) {
+      linhas.push([
+        reg.data,
+        "Compensação",
+        "",
+        "",
+        "",
+        "",
+        formatarSaldoCSV(saldo),
+      ]);
+    } else {
+      linhas.push([
+        reg.data,
+        "Normal",
+        formatarHoraCSV(reg.entrada),
+        formatarHoraCSV(reg.saidaAlmoco),
+        formatarHoraCSV(reg.retornoAlmoco),
+        formatarHoraCSV(reg.saidaDia),
+        formatarSaldoCSV(saldo),
+      ]);
+    }
+  }
+
+  // Linha de saldo total
+  linhas.push([]);
+  linhas.push(["", "", "", "", "", "Saldo Total", formatarSaldoCSV(saldoAcumuladoMs)]);
+
+  const csvContent = linhas
+    .map((row) => row.map((cell) => `"${cell}"`).join(";"))
+    .join("\n");
+
+  const bom = "\uFEFF"; // BOM para compatibilidade com Excel
+  const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const dataHoje = new Date().toISOString().split("T")[0];
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `historico-ponto-${dataHoje}.csv`;
+  a.click();
+
+  URL.revokeObjectURL(url);
+}

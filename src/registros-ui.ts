@@ -1,4 +1,4 @@
-import { RegistroHistorico, obterCargaHoraria, obterHistoricoCompleto, salvarRegistroEditado, removerRegistroDoHistorico } from "./registros.js";
+import { RegistroHistorico, obterCargaHoraria, obterHistoricoCompleto, salvarRegistroEditado, removerRegistroDoHistorico, exportarHistoricoCSV } from "./registros.js";
 import { applyLongPress } from "./utils/long-press.js";
 
 // Elementos do DOM
@@ -14,6 +14,7 @@ const btnNovoRegistro = document.getElementById('btnNovoRegistro') as HTMLButton
 const btnCancelarModal = document.getElementById('btnCancelarModal') as HTMLButtonElement;
 const modalTitulo = document.getElementById('modalTitulo') as HTMLDivElement;
 const selectOrdenacao = document.getElementById('selectOrdenacao') as HTMLSelectElement;
+const btnExportarCSV = document.getElementById('btnExportarCSV') as HTMLButtonElement;
 
 // Inputs do Modal
 const inputTipoRegistro = document.getElementById('inputTipoRegistro') as HTMLSelectElement;
@@ -286,6 +287,7 @@ registroForm.addEventListener('submit', async (e) => {
 btnNovoRegistro.addEventListener('click', abrirModalNovo);
 btnCancelarModal.addEventListener('click', () => registroModal.close());
 selectOrdenacao.addEventListener('change', carregarEExibirRegistros);
+btnExportarCSV.addEventListener('click', () => exportarHistoricoCSV());
 
 // Execução inicial
 inicializarCabecalho();

@@ -16,6 +16,28 @@
     />
     <title>Histórico de Ponto</title>
     <link rel="stylesheet" href="../styles/registros.css" />
+    <style>
+      .btn-exportar-csv {
+        background: transparent;
+        border: 1px solid var(--border-color, #333);
+        color: var(--primary-color, #03dac6);
+        padding: 6px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        white-space: nowrap;
+        transition: background 0.2s, border-color 0.2s;
+        flex-shrink: 0;
+      }
+      .btn-exportar-csv:hover {
+        background: rgba(3, 218, 198, 0.1);
+        border-color: var(--primary-color, #03dac6);
+      }
+      .btn-exportar-csv:active {
+        background: rgba(3, 218, 198, 0.2);
+      }
+    </style>
   </head>
   <body>
     <header>
@@ -45,6 +67,9 @@
         <option value="horas-desc">Saldo (Maior para menor)</option>
         <option value="horas-asc">Saldo (Menor para maior)</option>
       </select>
+      <button id="btnExportarCSV" class="btn-exportar-csv" title="Exportar histórico como CSV">
+        &#8595; CSV
+      </button>
     </div>
 
     <main id="listaRegistros"></main>
