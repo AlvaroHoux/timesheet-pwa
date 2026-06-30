@@ -100,6 +100,7 @@
         </div>
       </form>
     </dialog>
+
     <dialog id="modalConfig">
       <div
         class="modal-header"
@@ -150,6 +151,45 @@
             />
           </div>
         </div>
+
+        <div class="form-group">
+          <label>Tempo de Almoço</label>
+          <div style="display: flex; gap: 10px">
+            <input
+              type="number"
+              id="inputHorasAlmoco"
+              placeholder="Horas"
+              min="0"
+              max="3"
+              required
+              style="
+                width: 50%;
+                background-color: #121212;
+                border: 1px solid #333;
+                color: white;
+                padding: 10px;
+                border-radius: 8px;
+              "
+            />
+            <input
+              type="number"
+              id="inputMinutosAlmoco"
+              placeholder="Minutos"
+              min="0"
+              max="59"
+              required
+              style="
+                width: 50%;
+                background-color: #121212;
+                border: 1px solid #333;
+                color: white;
+                padding: 10px;
+                border-radius: 8px;
+              "
+            />
+          </div>
+        </div>
+
         <div class="modal-actions">
           <button
             type="button"
@@ -161,6 +201,17 @@
           <button type="submit" class="btn-modal btn-salvar">Salvar</button>
         </div>
       </form>
+      <div style="
+        margin-top: 20px;
+        text-align: center;
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        opacity: 0.5;
+        border-top: 1px solid #333;
+        padding-top: 15px;
+      ">
+        Versão 2.0.0
+      </div>
     </dialog>
 
     <script type="module" src="../dist/ponto.js"></script>

@@ -13,7 +13,17 @@ window.addEventListener('popstate', function () {
   history.pushState(null, document.title, location.href);
 });
 
-const TEMPO_ALMOCO: number = 1 * 60 * 60 * 1000;
+// Função para obter o tempo de almoço configurado
+function obterTempoAlmoco(): number {
+  const tempoAlmocoStr = localStorage.getItem('tempoAlmoco');
+  if (tempoAlmocoStr) {
+    return parseInt(tempoAlmocoStr, 10);
+  }
+  // Padrão: 1 hora
+  return 1 * 60 * 60 * 1000;
+}
+
+let TEMPO_ALMOCO: number = obterTempoAlmoco();
 
 let dadosPonto: DadosPonto = {
   estado: 0,
@@ -45,14 +55,25 @@ const modalConfig = document.getElementById('modalConfig') as HTMLDialogElement;
 const formConfig = document.getElementById('formConfig') as HTMLFormElement;
 const inputHorasCarga = document.getElementById('inputHorasCarga') as HTMLInputElement;
 const inputMinutosCarga = document.getElementById('inputMinutosCarga') as HTMLInputElement;
+const inputHorasAlmoco = document.getElementById('inputHorasAlmoco') as HTMLInputElement;
+const inputMinutosAlmoco = document.getElementById('inputMinutosAlmoco') as HTMLInputElement;
 const btnCancelarConfig = document.getElementById('btnCancelarConfig') as HTMLButtonElement;
 
 btnConfig.addEventListener('click', () => {
+  // Carregar configurações atuais
   const cargaMs = obterCargaHoraria();
   const horas = Math.floor(cargaMs / (60 * 60 * 1000));
   const minutos = Math.floor((cargaMs % (60 * 60 * 1000)) / (60 * 1000));
   inputHorasCarga.value = horas.toString();
   inputMinutosCarga.value = minutos.toString();
+
+  // Carregar tempo de almoço atual
+  const tempoAlmocoMs = obterTempoAlmoco();
+  const horasAlmoco = Math.floor(tempoAlmocoMs / (60 * 60 * 1000));
+  const minutosAlmoco = Math.floor((tempoAlmocoMs % (60 * 60 * 1000)) / (60 * 1000));
+  inputHorasAlmoco.value = horasAlmoco.toString();
+  inputMinutosAlmoco.value = minutosAlmoco.toString();
+
   modalConfig.showModal();
 });
 
@@ -62,11 +83,22 @@ btnCancelarConfig.addEventListener('click', () => {
 
 formConfig.addEventListener('submit', (e) => {
   e.preventDefault();
+  
+  // Salvar carga horária
   const horas = parseInt(inputHorasCarga.value || '0', 10);
   const minutos = parseInt(inputMinutosCarga.value || '0', 10);
   const cargaMs = horas * 60 * 60 * 1000 + minutos * 60 * 1000;
-
   localStorage.setItem('cargaHoraria', cargaMs.toString());
+
+  // Salvar tempo de almoço
+  const horasAlmoco = parseInt(inputHorasAlmoco.value || '0', 10);
+  const minutosAlmoco = parseInt(inputMinutosAlmoco.value || '0', 10);
+  const tempoAlmocoMs = horasAlmoco * 60 * 60 * 1000 + minutosAlmoco * 60 * 1000;
+  localStorage.setItem('tempoAlmoco', tempoAlmocoMs.toString());
+  
+  // Atualizar a variável global
+  TEMPO_ALMOCO = tempoAlmocoMs;
+
   modalConfig.close();
   atualizarInterface();
 });
@@ -181,7 +213,7 @@ function calcularHorarioSaidaEstimado(): string | null {
   
   switch (dadosPonto.estado) {
     case 1: {
-      // Turno 1: precisa trabalhar a carga completa + 1 hora de almoço
+      // Turno 1: precisa trabalhar a carga completa + tempo de almoço
       tempoTrabalhado = agoraMs - dadosPonto.inicioDia;
       tempoTotalNecessario = cargaHorariaMs + TEMPO_ALMOCO;
       break;
@@ -368,6 +400,8 @@ applyLongPress(
 
 carregarEstado().then((estadoSalvo: DadosPonto) => {
   dadosPonto = estadoSalvo;
+  // Atualiza o TEMPO_ALMOCO com o valor salvo (ou padrão)
+  TEMPO_ALMOCO = obterTempoAlmoco();
   setInterval(atualizarInterface, 1000);
   atualizarInterface();
 
