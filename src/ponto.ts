@@ -29,6 +29,7 @@ const btnCancelarDia = document.getElementById('btnCancelarDia') as HTMLButtonEl
 const clockDisplay = document.getElementById('clockDisplay') as HTMLDivElement;
 const statusDisplay = document.getElementById('statusDisplay') as HTMLDivElement;
 const countdownDisplay = document.getElementById('countdownDisplay') as HTMLDivElement;
+const estimativaDisplay = document.getElementById('estimativaDisplay') as HTMLDivElement;
 
 const estadoDropdown = document.getElementById('estadoDropdown') as HTMLSelectElement;
 const btnEditarHoje = document.getElementById('btnEditarHoje') as HTMLButtonElement;
@@ -165,17 +166,7 @@ function converterHoraParaTimestampHoje(horaStr: string): number | null {
   return data.getTime();
 }
 
-function exibirContagemRegressivaOuExtra(tempoRestante: number): void {
-  if (tempoRestante >= 0) {
-    countdownDisplay.textContent = `Restam ${formatarTempo(tempoRestante)}`;
-    countdownDisplay.style.color = 'var(--primary-color)';
-  } else {
-    countdownDisplay.textContent = `Extra: +${formatarTempo(Math.abs(tempoRestante))}`;
-    countdownDisplay.style.color = 'var(--accent-color)';
-  }
-}
-
-// --- FUNÇÃO PARA CALCULAR HORÁRIO ESTIMADO DE SAÍDA ---
+// --- FUNÇÃO PARA CALCULAR HORÁRIO ESTIMADO DE SAÍDA CONSIDERANDO ALMOÇO ---
 function calcularHorarioSaidaEstimado(): string | null {
   const agoraMs = Date.now();
   const cargaHorariaMs = obterCargaHoraria();
@@ -186,36 +177,41 @@ function calcularHorarioSaidaEstimado(): string | null {
   }
 
   let tempoTrabalhado = 0;
+  let tempoTotalNecessario = cargaHorariaMs;
   
   switch (dadosPonto.estado) {
     case 1: {
-      // Turno 1: tempo desde o início do dia
+      // Turno 1: precisa trabalhar a carga completa + 1 hora de almoço
       tempoTrabalhado = agoraMs - dadosPonto.inicioDia;
+      tempoTotalNecessario = cargaHorariaMs + TEMPO_ALMOCO;
       break;
     }
     case 2: {
       // Horário de almoço: considera apenas o tempo trabalhado antes do almoço
       if (dadosPonto.inicioAlmoco) {
         tempoTrabalhado = dadosPonto.inicioAlmoco - dadosPonto.inicioDia;
+        tempoTotalNecessario = cargaHorariaMs + TEMPO_ALMOCO;
       }
       break;
     }
     case 3: {
-      // Turno 2: soma turno1 + turno2 atual
+      // Turno 2: soma turno1 + turno2 atual (já com almoço completo)
       if (dadosPonto.inicioAlmoco && dadosPonto.fimAlmoco) {
         const turno1 = dadosPonto.inicioAlmoco - dadosPonto.inicioDia;
         const turno2 = agoraMs - dadosPonto.fimAlmoco;
         tempoTrabalhado = turno1 + turno2;
+        tempoTotalNecessario = cargaHorariaMs;
       } else if (dadosPonto.inicioDia) {
-        // Caso sem almoço registrado
+        // Caso sem almoço registrado (fallback)
         tempoTrabalhado = agoraMs - dadosPonto.inicioDia;
+        tempoTotalNecessario = cargaHorariaMs;
       }
       break;
     }
   }
 
   // Calcula o tempo restante
-  const tempoRestante = cargaHorariaMs - tempoTrabalhado;
+  const tempoRestante = tempoTotalNecessario - tempoTrabalhado;
   
   // Se já ultrapassou a carga ou está muito próximo (menos de 1 minuto), retorna null
   if (tempoRestante <= 60000) {
@@ -238,7 +234,6 @@ function atualizarInterface(): void {
     estadoDropdown.value = dadosPonto.estado.toString();
   }
 
-  // Mudado de 'block' para 'flex' para respeitar centralização do ícone no CSS
   btnCancelarDia.style.display = dadosPonto.estado > 0 ? 'flex' : 'none';
 
   if (dadosPonto.estado !== 2) {
@@ -248,6 +243,9 @@ function atualizarInterface(): void {
 
   // Calcular horário estimado de saída
   const horarioEstimado = calcularHorarioSaidaEstimado();
+
+  // Limpa o display de estimativa por padrão
+  estimativaDisplay.textContent = '';
 
   switch (dadosPonto.estado) {
     case 0:
@@ -260,20 +258,20 @@ function atualizarInterface(): void {
       statusDisplay.textContent = 'Trabalhando (Turno 1)';
       if (dadosPonto.inicioDia) {
         const tempoDecorrido1 = agoraMs - dadosPonto.inicioDia;
-        const restante1 = obterCargaHoraria() - tempoDecorrido1;
+        const restante1 = (obterCargaHoraria() + TEMPO_ALMOCO) - tempoDecorrido1;
         
         // Exibe contagem regressiva ou extra
         if (restante1 >= 0) {
-          let texto = `Restam ${formatarTempo(restante1)}`;
-          // Adiciona horário estimado se disponível
-          if (horarioEstimado && restante1 > 60000) {
-            texto += ` • Saída: ${horarioEstimado}`;
-          }
-          countdownDisplay.textContent = texto;
+          countdownDisplay.textContent = `Restam ${formatarTempo(restante1)}`;
           countdownDisplay.style.color = 'var(--primary-color)';
         } else {
           countdownDisplay.textContent = `Extra: +${formatarTempo(Math.abs(restante1))}`;
           countdownDisplay.style.color = 'var(--accent-color)';
+        }
+        
+        // Adiciona horário estimado na parte inferior
+        if (horarioEstimado && restante1 > 60000) {
+          estimativaDisplay.textContent = `Horário estimado de saída: ${horarioEstimado}`;
         }
       }
       break;
@@ -293,6 +291,11 @@ function atualizarInterface(): void {
           countdownDisplay.textContent = `Almoço estourado: +${formatarTempo(Math.abs(restanteAlmoco))}`;
           countdownDisplay.style.color = 'var(--alert-color)';
         }
+        
+        // Mostra estimativa de saída durante o almoço (se disponível)
+        if (horarioEstimado) {
+          estimativaDisplay.textContent = `Horário estimado de saída: ${horarioEstimado}`;
+        }
       }
       break;
 
@@ -306,16 +309,16 @@ function atualizarInterface(): void {
         
         // Exibe contagem regressiva ou extra
         if (restante2 >= 0) {
-          let texto = `Restam ${formatarTempo(restante2)}`;
-          // Adiciona horário estimado se disponível
-          if (horarioEstimado && restante2 > 60000) {
-            texto += ` • Saída: ${horarioEstimado}`;
-          }
-          countdownDisplay.textContent = texto;
+          countdownDisplay.textContent = `Restam ${formatarTempo(restante2)}`;
           countdownDisplay.style.color = 'var(--primary-color)';
         } else {
           countdownDisplay.textContent = `Extra: +${formatarTempo(Math.abs(restante2))}`;
           countdownDisplay.style.color = 'var(--accent-color)';
+        }
+        
+        // Adiciona horário estimado na parte inferior
+        if (horarioEstimado && restante2 > 60000) {
+          estimativaDisplay.textContent = `Horário estimado de saída: ${horarioEstimado}`;
         }
       } else if (dadosPonto.inicioDia) {
         const tempoTotalTrabalhadoDireto = agoraMs - dadosPonto.inicioDia;
@@ -323,16 +326,16 @@ function atualizarInterface(): void {
         
         // Exibe contagem regressiva ou extra
         if (restanteSemAlmoco >= 0) {
-          let texto = `Restam ${formatarTempo(restanteSemAlmoco)}`;
-          // Adiciona horário estimado se disponível
-          if (horarioEstimado && restanteSemAlmoco > 60000) {
-            texto += ` • Saída: ${horarioEstimado}`;
-          }
-          countdownDisplay.textContent = texto;
+          countdownDisplay.textContent = `Restam ${formatarTempo(restanteSemAlmoco)}`;
           countdownDisplay.style.color = 'var(--primary-color)';
         } else {
           countdownDisplay.textContent = `Extra: +${formatarTempo(Math.abs(restanteSemAlmoco))}`;
           countdownDisplay.style.color = 'var(--accent-color)';
+        }
+        
+        // Adiciona horário estimado na parte inferior
+        if (horarioEstimado && restanteSemAlmoco > 60000) {
+          estimativaDisplay.textContent = `Horário estimado de saída: ${horarioEstimado}`;
         }
       }
       break;
