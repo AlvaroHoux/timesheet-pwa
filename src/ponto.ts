@@ -170,9 +170,64 @@ function exibirContagemRegressivaOuExtra(tempoRestante: number): void {
     countdownDisplay.textContent = `Restam ${formatarTempo(tempoRestante)}`;
     countdownDisplay.style.color = 'var(--primary-color)';
   } else {
-    countdownDisplay.textContent = `Extra: +${formatarTempo(tempoRestante)}`;
+    countdownDisplay.textContent = `Extra: +${formatarTempo(Math.abs(tempoRestante))}`;
     countdownDisplay.style.color = 'var(--accent-color)';
   }
+}
+
+// --- FUNÇÃO PARA CALCULAR HORÁRIO ESTIMADO DE SAÍDA ---
+function calcularHorarioSaidaEstimado(): string | null {
+  const agoraMs = Date.now();
+  const cargaHorariaMs = obterCargaHoraria();
+  
+  // Só calcula se o dia já foi iniciado
+  if (dadosPonto.estado === 0 || !dadosPonto.inicioDia) {
+    return null;
+  }
+
+  let tempoTrabalhado = 0;
+  
+  switch (dadosPonto.estado) {
+    case 1: {
+      // Turno 1: tempo desde o início do dia
+      tempoTrabalhado = agoraMs - dadosPonto.inicioDia;
+      break;
+    }
+    case 2: {
+      // Horário de almoço: considera apenas o tempo trabalhado antes do almoço
+      if (dadosPonto.inicioAlmoco) {
+        tempoTrabalhado = dadosPonto.inicioAlmoco - dadosPonto.inicioDia;
+      }
+      break;
+    }
+    case 3: {
+      // Turno 2: soma turno1 + turno2 atual
+      if (dadosPonto.inicioAlmoco && dadosPonto.fimAlmoco) {
+        const turno1 = dadosPonto.inicioAlmoco - dadosPonto.inicioDia;
+        const turno2 = agoraMs - dadosPonto.fimAlmoco;
+        tempoTrabalhado = turno1 + turno2;
+      } else if (dadosPonto.inicioDia) {
+        // Caso sem almoço registrado
+        tempoTrabalhado = agoraMs - dadosPonto.inicioDia;
+      }
+      break;
+    }
+  }
+
+  // Calcula o tempo restante
+  const tempoRestante = cargaHorariaMs - tempoTrabalhado;
+  
+  // Se já ultrapassou a carga ou está muito próximo (menos de 1 minuto), retorna null
+  if (tempoRestante <= 60000) {
+    return null;
+  }
+
+  // Calcula o horário de saída estimado
+  const horarioSaida = new Date(agoraMs + tempoRestante);
+  const horas = horarioSaida.getHours().toString().padStart(2, '0');
+  const minutos = horarioSaida.getMinutes().toString().padStart(2, '0');
+  
+  return `${horas}:${minutos}`;
 }
 
 function atualizarInterface(): void {
@@ -187,8 +242,12 @@ function atualizarInterface(): void {
   btnCancelarDia.style.display = dadosPonto.estado > 0 ? 'flex' : 'none';
 
   if (dadosPonto.estado !== 2) {
-    clockDisplay.textContent = agora.toTimeString().split(' ')[0];
+    const horaAtual = agora.toTimeString().split(' ')[0];
+    clockDisplay.textContent = horaAtual;
   }
+
+  // Calcular horário estimado de saída
+  const horarioEstimado = calcularHorarioSaidaEstimado();
 
   switch (dadosPonto.estado) {
     case 0:
@@ -202,7 +261,20 @@ function atualizarInterface(): void {
       if (dadosPonto.inicioDia) {
         const tempoDecorrido1 = agoraMs - dadosPonto.inicioDia;
         const restante1 = obterCargaHoraria() - tempoDecorrido1;
-        exibirContagemRegressivaOuExtra(restante1);
+        
+        // Exibe contagem regressiva ou extra
+        if (restante1 >= 0) {
+          let texto = `Restam ${formatarTempo(restante1)}`;
+          // Adiciona horário estimado se disponível
+          if (horarioEstimado && restante1 > 60000) {
+            texto += ` • Saída: ${horarioEstimado}`;
+          }
+          countdownDisplay.textContent = texto;
+          countdownDisplay.style.color = 'var(--primary-color)';
+        } else {
+          countdownDisplay.textContent = `Extra: +${formatarTempo(Math.abs(restante1))}`;
+          countdownDisplay.style.color = 'var(--accent-color)';
+        }
       }
       break;
 
@@ -218,7 +290,7 @@ function atualizarInterface(): void {
           countdownDisplay.style.color = 'var(--text-secondary)';
         } else {
           clockDisplay.textContent = formatarTempo(restanteAlmoco);
-          countdownDisplay.textContent = `Almoço estourado: +${formatarTempo(tempoAlmocoDecorrido - TEMPO_ALMOCO)}`;
+          countdownDisplay.textContent = `Almoço estourado: +${formatarTempo(Math.abs(restanteAlmoco))}`;
           countdownDisplay.style.color = 'var(--alert-color)';
         }
       }
@@ -231,11 +303,37 @@ function atualizarInterface(): void {
         const tempoTrabalhadoTurno2 = agoraMs - dadosPonto.fimAlmoco;
         const totalTrabalhado = tempoTrabalhadoTurno1 + tempoTrabalhadoTurno2;
         const restante2 = obterCargaHoraria() - totalTrabalhado;
-        exibirContagemRegressivaOuExtra(restante2);
+        
+        // Exibe contagem regressiva ou extra
+        if (restante2 >= 0) {
+          let texto = `Restam ${formatarTempo(restante2)}`;
+          // Adiciona horário estimado se disponível
+          if (horarioEstimado && restante2 > 60000) {
+            texto += ` • Saída: ${horarioEstimado}`;
+          }
+          countdownDisplay.textContent = texto;
+          countdownDisplay.style.color = 'var(--primary-color)';
+        } else {
+          countdownDisplay.textContent = `Extra: +${formatarTempo(Math.abs(restante2))}`;
+          countdownDisplay.style.color = 'var(--accent-color)';
+        }
       } else if (dadosPonto.inicioDia) {
         const tempoTotalTrabalhadoDireto = agoraMs - dadosPonto.inicioDia;
         const restanteSemAlmoco = obterCargaHoraria() - tempoTotalTrabalhadoDireto;
-        exibirContagemRegressivaOuExtra(restanteSemAlmoco);
+        
+        // Exibe contagem regressiva ou extra
+        if (restanteSemAlmoco >= 0) {
+          let texto = `Restam ${formatarTempo(restanteSemAlmoco)}`;
+          // Adiciona horário estimado se disponível
+          if (horarioEstimado && restanteSemAlmoco > 60000) {
+            texto += ` • Saída: ${horarioEstimado}`;
+          }
+          countdownDisplay.textContent = texto;
+          countdownDisplay.style.color = 'var(--primary-color)';
+        } else {
+          countdownDisplay.textContent = `Extra: +${formatarTempo(Math.abs(restanteSemAlmoco))}`;
+          countdownDisplay.style.color = 'var(--accent-color)';
+        }
       }
       break;
   }
@@ -265,7 +363,7 @@ applyLongPress(
   () => btnCancelarDia.classList.remove('pressing'),
 );
 
-carregarEstado().then((estadoSalvo) => {
+carregarEstado().then((estadoSalvo: DadosPonto) => {
   dadosPonto = estadoSalvo;
   setInterval(atualizarInterface, 1000);
   atualizarInterface();
