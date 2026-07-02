@@ -83,7 +83,7 @@ btnCancelarConfig.addEventListener('click', () => {
 
 formConfig.addEventListener('submit', (e) => {
   e.preventDefault();
-  
+
   // Salvar carga horária
   const horas = parseInt(inputHorasCarga.value || '0', 10);
   const minutos = parseInt(inputMinutosCarga.value || '0', 10);
@@ -95,7 +95,7 @@ formConfig.addEventListener('submit', (e) => {
   const minutosAlmoco = parseInt(inputMinutosAlmoco.value || '0', 10);
   const tempoAlmocoMs = horasAlmoco * 60 * 60 * 1000 + minutosAlmoco * 60 * 1000;
   localStorage.setItem('tempoAlmoco', tempoAlmocoMs.toString());
-  
+
   // Atualizar a variável global
   TEMPO_ALMOCO = tempoAlmocoMs;
 
@@ -198,11 +198,10 @@ function converterHoraParaTimestampHoje(horaStr: string): number | null {
   return data.getTime();
 }
 
-// --- FUNÇÃO PARA CALCULAR HORÁRIO ESTIMADO DE SAÍDA CONSIDERANDO ALMOÇO ---
 function calcularHorarioSaidaEstimado(): string | null {
   const agoraMs = Date.now();
   const cargaHorariaMs = obterCargaHoraria();
-  
+
   // Só calcula se o dia já foi iniciado
   if (dadosPonto.estado === 0 || !dadosPonto.inicioDia) {
     return null;
@@ -210,7 +209,7 @@ function calcularHorarioSaidaEstimado(): string | null {
 
   let tempoTrabalhado = 0;
   let tempoTotalNecessario = cargaHorariaMs;
-  
+
   switch (dadosPonto.estado) {
     case 1: {
       // Turno 1: precisa trabalhar a carga completa + tempo de almoço
@@ -219,12 +218,9 @@ function calcularHorarioSaidaEstimado(): string | null {
       break;
     }
     case 2: {
-      // Horário de almoço: considera apenas o tempo trabalhado antes do almoço
-      if (dadosPonto.inicioAlmoco) {
-        tempoTrabalhado = dadosPonto.inicioAlmoco - dadosPonto.inicioDia;
-        tempoTotalNecessario = cargaHorariaMs + TEMPO_ALMOCO;
-      }
-      break;
+      // Durante o almoço: NÃO deve mostrar estimativa de saída
+      // O usuário ainda não voltou do almoço, então não podemos estimar
+      return null;
     }
     case 3: {
       // Turno 2: soma turno1 + turno2 atual (já com almoço completo)
@@ -244,7 +240,7 @@ function calcularHorarioSaidaEstimado(): string | null {
 
   // Calcula o tempo restante
   const tempoRestante = tempoTotalNecessario - tempoTrabalhado;
-  
+
   // Se já ultrapassou a carga ou está muito próximo (menos de 1 minuto), retorna null
   if (tempoRestante <= 60000) {
     return null;
@@ -254,7 +250,7 @@ function calcularHorarioSaidaEstimado(): string | null {
   const horarioSaida = new Date(agoraMs + tempoRestante);
   const horas = horarioSaida.getHours().toString().padStart(2, '0');
   const minutos = horarioSaida.getMinutes().toString().padStart(2, '0');
-  
+
   return `${horas}:${minutos}`;
 }
 
@@ -290,8 +286,8 @@ function atualizarInterface(): void {
       statusDisplay.textContent = 'Trabalhando (Turno 1)';
       if (dadosPonto.inicioDia) {
         const tempoDecorrido1 = agoraMs - dadosPonto.inicioDia;
-        const restante1 = (obterCargaHoraria() + TEMPO_ALMOCO) - tempoDecorrido1;
-        
+        const restante1 = obterCargaHoraria() + TEMPO_ALMOCO - tempoDecorrido1;
+
         // Exibe contagem regressiva ou extra
         if (restante1 >= 0) {
           countdownDisplay.textContent = `Restam ${formatarTempo(restante1)}`;
@@ -300,13 +296,15 @@ function atualizarInterface(): void {
           countdownDisplay.textContent = `Extra: +${formatarTempo(Math.abs(restante1))}`;
           countdownDisplay.style.color = 'var(--accent-color)';
         }
-        
+
         // Adiciona horário estimado na parte inferior
         if (horarioEstimado && restante1 > 60000) {
           estimativaDisplay.textContent = `Horário estimado de saída: ${horarioEstimado}`;
         }
       }
       break;
+
+    // No case 2 da função atualizarInterface(), substitua a parte que mostra a estimativa:
 
     case 2:
       statusDisplay.textContent = 'Intervalo de Almoço';
@@ -323,14 +321,9 @@ function atualizarInterface(): void {
           countdownDisplay.textContent = `Almoço estourado: +${formatarTempo(Math.abs(restanteAlmoco))}`;
           countdownDisplay.style.color = 'var(--alert-color)';
         }
-        
-        // Mostra estimativa de saída durante o almoço (se disponível)
-        if (horarioEstimado) {
-          estimativaDisplay.textContent = `Horário estimado de saída: ${horarioEstimado}`;
-        }
+        estimativaDisplay.textContent = '';
       }
       break;
-
     case 3:
       statusDisplay.textContent = 'Trabalhando (Turno 2)';
       if (dadosPonto.inicioDia && dadosPonto.inicioAlmoco && dadosPonto.fimAlmoco) {
@@ -338,7 +331,7 @@ function atualizarInterface(): void {
         const tempoTrabalhadoTurno2 = agoraMs - dadosPonto.fimAlmoco;
         const totalTrabalhado = tempoTrabalhadoTurno1 + tempoTrabalhadoTurno2;
         const restante2 = obterCargaHoraria() - totalTrabalhado;
-        
+
         // Exibe contagem regressiva ou extra
         if (restante2 >= 0) {
           countdownDisplay.textContent = `Restam ${formatarTempo(restante2)}`;
@@ -347,7 +340,7 @@ function atualizarInterface(): void {
           countdownDisplay.textContent = `Extra: +${formatarTempo(Math.abs(restante2))}`;
           countdownDisplay.style.color = 'var(--accent-color)';
         }
-        
+
         // Adiciona horário estimado na parte inferior
         if (horarioEstimado && restante2 > 60000) {
           estimativaDisplay.textContent = `Horário estimado de saída: ${horarioEstimado}`;
@@ -355,7 +348,7 @@ function atualizarInterface(): void {
       } else if (dadosPonto.inicioDia) {
         const tempoTotalTrabalhadoDireto = agoraMs - dadosPonto.inicioDia;
         const restanteSemAlmoco = obterCargaHoraria() - tempoTotalTrabalhadoDireto;
-        
+
         // Exibe contagem regressiva ou extra
         if (restanteSemAlmoco >= 0) {
           countdownDisplay.textContent = `Restam ${formatarTempo(restanteSemAlmoco)}`;
@@ -364,7 +357,7 @@ function atualizarInterface(): void {
           countdownDisplay.textContent = `Extra: +${formatarTempo(Math.abs(restanteSemAlmoco))}`;
           countdownDisplay.style.color = 'var(--accent-color)';
         }
-        
+
         // Adiciona horário estimado na parte inferior
         if (horarioEstimado && restanteSemAlmoco > 60000) {
           estimativaDisplay.textContent = `Horário estimado de saída: ${horarioEstimado}`;
