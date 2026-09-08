@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
+
+/* Suaviza as transições de cor globalmente para quando o tema for alterado */
+html, body {
+  @apply transition-colors duration-300;
+}
