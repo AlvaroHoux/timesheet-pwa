@@ -2,11 +2,13 @@
   "name": "timesheet-pwa",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "watch": "npx tsc -w",
-    "build": "npx tsc",
-    "start": "node index.js"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
   },
   "repository": {
     "type": "git",
@@ -15,13 +17,22 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/AlvaroHoux/timesheet-pwa/issues"
   },
   "homepage": "https://github.com/AlvaroHoux/timesheet-pwa#readme",
   "devDependencies": {
-    "@types/node": "^25.9.3",
-    "typescript": "^6.0.3"
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.0.1",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vue-tsc": "^3.3.8"
+  },
+  "dependencies": {
+    "material-icons": "^1.13.14",
+    "vite": "^8.1.5",
+    "vue": "^3.5.40",
+    "vue-router": "^4.6.4"
   }
 }

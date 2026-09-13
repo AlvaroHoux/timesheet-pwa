@@ -2,28 +2,32 @@
   <button
     type="button"
     @click="toggleTheme"
-    :aria-label="currentTheme === 'dark' ? 'Alternar para tema claro' : 'Alternar para tema escuro'"
-    :title="currentTheme === 'dark' ? 'Alternar para Tema Claro' : 'Alternar para Tema Escuro'"
+    :aria-label="currentTheme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'"
+    :title="currentTheme === 'dark' ? 'Tema Claro' : 'Tema Escuro'"
     :class="[
-      fixed ? 'fixed top-4 right-4 md:top-8 md:right-8 z-50' : 'relative',
-      'w-10 h-10 flex items-center justify-center rounded-full shadow-sm hover:shadow-md active:scale-95 transition-all duration-200 border cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-white/90 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-amber-400'
+      fixed ? 'fixed top-4 right-4 z-50' : 'relative',
+      'w-10 h-10 inline-flex items-center justify-center rounded-2xl border transition-all duration-200 cursor-pointer active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600',
+      'bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/80 dark:hover:bg-zinc-800'
     ]">
-    <span v-if="currentTheme === 'dark'" class="material-icons text-xl text-amber-400">light_mode</span>
-    <span v-else class="material-icons text-xl text-slate-700">dark_mode</span>
+    <span v-if="currentTheme === 'dark'" class="material-icons text-[20px] text-amber-400 transition-transform duration-200 hover:rotate-12">
+      light_mode
+    </span>
+    <span v-else class="material-icons text-[20px] text-zinc-700 transition-transform duration-200 hover:-rotate-12">
+      dark_mode
+    </span>
   </button>
 </template>
 
 <script lang="ts" setup>
 import { useTheme } from '@/composables/useTheme';
 
-const { currentTheme, toggleTheme } = useTheme();
-
 interface Props {
   fixed?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
-  fixed: true,
+  fixed: false,
 });
-</script>
 
+const { currentTheme, toggleTheme } = useTheme();
+</script>
