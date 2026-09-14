@@ -11,9 +11,23 @@ export interface RegistroHistorico {
   entrada: number | null;
   saidaAlmoco: number | null;
   retornoAlmoco: number | null;
-  saidaDia: number;
+  saidaDia: number | null;
   isCompensacao?: boolean;
   saldoCompensacao?: number; // em ms
+  descricao?: string; // Motivo do ajuste ou observação
+}
+
+export interface ConfigFinanceira {
+  salarioMensal: number;
+  diasUteisMes: number;
+  adicionalExtra: number; // Percentual, ex: 50 (%)
+  adicionalFimDeSemana: number; // Percentual, ex: 100 (%)
+  mostrarGanhos: boolean;
+}
+
+export interface ConfigCiclo {
+  diaInicio: number; // Dia de abertura do mês (ex: 27)
+  diaFim: number;    // Dia de fechamento do mês (ex: 26)
 }
 
 const DB_NAME = 'PontoEletronicoDB';
@@ -35,6 +49,109 @@ export function obterTempoAlmoco(): number {
 
 export function salvarTempoAlmoco(ms: number): void {
   localStorage.setItem('tempoAlmoco', ms.toString());
+}
+
+export function obterConfigCiclo(): ConfigCiclo {
+  const saved = localStorage.getItem('configCiclo');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed.diaInicio && parsed.diaFim) {
+        return parsed;
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return {
+    diaInicio: 27,
+    diaFim: 26,
+  };
+}
+
+export function salvarConfigCiclo(config: ConfigCiclo): void {
+  localStorage.setItem('configCiclo', JSON.stringify(config));
+}
+
+export function calcularPeriodoCiclo(
+  diaInicio: number,
+  diaFim: number,
+  referencia: Date = new Date()
+): { inicio: Date; fim: Date; textoFormatado: string } {
+  const anoRef = referencia.getFullYear();
+  const mesRef = referencia.getMonth(); // 0 a 11
+  const diaRef = referencia.getDate();
+
+  let inicio: Date;
+  let fim: Date;
+
+  if (diaInicio <= diaFim) {
+    inicio = new Date(anoRef, mesRef, diaInicio, 0, 0, 0, 0);
+    const ultimoDiaDoMes = new Date(anoRef, mesRef + 1, 0).getDate();
+    const diaRealFim = Math.min(diaFim, ultimoDiaDoMes);
+    fim = new Date(anoRef, mesRef, diaRealFim, 23, 59, 59, 999);
+  } else {
+    // Ex: diaInicio = 27, diaFim = 26
+    if (diaRef >= diaInicio) {
+      inicio = new Date(anoRef, mesRef, diaInicio, 0, 0, 0, 0);
+      const proximoMes = mesRef + 1;
+      const ultimoDiaProximoMes = new Date(anoRef, proximoMes + 1, 0).getDate();
+      const diaRealFim = Math.min(diaFim, ultimoDiaProximoMes);
+      fim = new Date(anoRef, proximoMes, diaRealFim, 23, 59, 59, 999);
+    } else {
+      const mesAnterior = mesRef - 1;
+      const ultimoDiaMesAnterior = new Date(anoRef, mesAnterior + 1, 0).getDate();
+      const diaRealInicio = Math.min(diaInicio, ultimoDiaMesAnterior);
+      inicio = new Date(anoRef, mesAnterior, diaRealInicio, 0, 0, 0, 0);
+
+      const ultimoDiaMesAtual = new Date(anoRef, mesRef + 1, 0).getDate();
+      const diaRealFim = Math.min(diaFim, ultimoDiaMesAtual);
+      fim = new Date(anoRef, mesRef, diaRealFim, 23, 59, 59, 999);
+    }
+  }
+
+  const formatarDataSimples = (d: Date) => {
+    const dia = String(d.getDate()).padStart(2, '0');
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    return `${dia}/${mes}`;
+  };
+
+  const textoFormatado = `${formatarDataSimples(inicio)} a ${formatarDataSimples(fim)}/${fim.getFullYear()}`;
+
+  return { inicio, fim, textoFormatado };
+}
+
+export function isDataNoPeriodo(dataStr: string, inicio: Date, fim: Date): boolean {
+  if (!dataStr) return false;
+  const partes = dataStr.split('/');
+  if (partes.length !== 3) return false;
+  const dia = parseInt(partes[0], 10);
+  const mes = parseInt(partes[1], 10) - 1;
+  const ano = parseInt(partes[2], 10);
+  const data = new Date(ano, mes, dia, 12, 0, 0);
+  return data.getTime() >= inicio.getTime() && data.getTime() <= fim.getTime();
+}
+
+export function obterConfigFinanceira(): ConfigFinanceira {
+  const saved = localStorage.getItem('configFinanceira');
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {
+      // fallback
+    }
+  }
+  return {
+    salarioMensal: 0,
+    diasUteisMes: 22,
+    adicionalExtra: 50,
+    adicionalFimDeSemana: 100,
+    mostrarGanhos: true,
+  };
+}
+
+export function salvarConfigFinanceira(config: ConfigFinanceira): void {
+  localStorage.setItem('configFinanceira', JSON.stringify(config));
 }
 
 function abrirBancoDados(): Promise<IDBDatabase> {
@@ -123,6 +240,35 @@ export async function arquivarRegistroNoHistorico(dadosPonto: DadosPonto, fimDia
   });
 }
 
+export async function criarRegistroAjuste(
+  data: string,
+  saldoCompensacaoMs: number,
+  descricao: string = ''
+): Promise<RegistroHistorico> {
+  const db = await abrirBancoDados();
+
+  const novoRegistro: RegistroHistorico = {
+    id: Date.now(),
+    data: data || new Date().toLocaleDateString('pt-BR'),
+    entrada: null,
+    saidaAlmoco: null,
+    retornoAlmoco: null,
+    saidaDia: null,
+    isCompensacao: true,
+    saldoCompensacao: saldoCompensacaoMs,
+    descricao: descricao.trim(),
+  };
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('historico', 'readwrite');
+    const store = transaction.objectStore('historico');
+    const request = store.add(novoRegistro);
+
+    request.onsuccess = () => resolve(novoRegistro);
+    request.onerror = () => reject(request.error);
+  });
+}
+
 export async function obterHistoricoCompleto(): Promise<RegistroHistorico[]> {
   const db = await abrirBancoDados();
 
@@ -133,7 +279,7 @@ export async function obterHistoricoCompleto(): Promise<RegistroHistorico[]> {
 
     request.onsuccess = () => {
       const items = (request.result as RegistroHistorico[]) || [];
-      // Ordena decrescente por ID / data mais recente primeiro
+      // Ordena decrescente por data/ID
       items.sort((a, b) => b.id - a.id);
       resolve(items);
     };
@@ -218,14 +364,18 @@ export function formatarSaldo(saldoMs: number): string {
   return `${sinal}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-export async function exportarHistoricoCSV(): Promise<void> {
-  const historico = await obterHistoricoCompleto();
+export async function exportarHistoricoCSV(filtroInicio?: Date, filtroFim?: Date): Promise<void> {
+  let historico = await obterHistoricoCompleto();
   const cargaHoraria = obterCargaHoraria();
+
+  if (filtroInicio && filtroFim) {
+    historico = historico.filter((reg) => isDataNoPeriodo(reg.data, filtroInicio, filtroFim));
+  }
 
   // Ordena por data crescente para exportação
   const ordenado = [...historico].reverse();
 
-  const cabecalho = ['Data', 'Tipo', 'Entrada', 'Saída Almoço', 'Retorno Almoço', 'Saída', 'Saldo'];
+  const cabecalho = ['Data', 'Tipo', 'Entrada', 'Saída Almoço', 'Retorno Almoço', 'Saída', 'Saldo', 'Descrição'];
   const linhas: string[][] = [cabecalho];
 
   let saldoAcumuladoMs = 0;
@@ -243,6 +393,7 @@ export async function exportarHistoricoCSV(): Promise<void> {
         '',
         '',
         formatarSaldo(saldo),
+        reg.descricao || '',
       ]);
     } else {
       linhas.push([
@@ -253,15 +404,16 @@ export async function exportarHistoricoCSV(): Promise<void> {
         formatarHora(reg.retornoAlmoco),
         formatarHora(reg.saidaDia),
         formatarSaldo(saldo),
+        reg.descricao || '',
       ]);
     }
   }
 
   linhas.push([]);
-  linhas.push(['', '', '', '', '', 'Saldo Total', formatarSaldo(saldoAcumuladoMs)]);
+  linhas.push(['', '', '', '', '', 'Saldo Total', formatarSaldo(saldoAcumuladoMs), '']);
 
   const csvContent = linhas
-    .map((row) => row.map((cell) => `"${cell}"`).join(';'))
+    .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(';'))
     .join('\n');
 
   const bom = '\uFEFF';
@@ -275,4 +427,134 @@ export async function exportarHistoricoCSV(): Promise<void> {
   a.click();
 
   URL.revokeObjectURL(url);
+}
+
+function parseHoraParaTimestamp(dataStr: string, horaStr: string): number | null {
+  if (!horaStr || !horaStr.includes(':')) return null;
+  const partesHora = horaStr.split(':');
+  const h = parseInt(partesHora[0], 10);
+  const m = parseInt(partesHora[1], 10);
+  if (isNaN(h) || isNaN(m)) return null;
+
+  // dataStr formato esperado: DD/MM/YYYY
+  const partesData = dataStr.split('/');
+  if (partesData.length === 3) {
+    const dia = parseInt(partesData[0], 10);
+    const mes = parseInt(partesData[1], 10) - 1;
+    const ano = parseInt(partesData[2], 10);
+    const d = new Date(ano, mes, dia, h, m, 0, 0);
+    return d.getTime();
+  }
+
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d.getTime();
+}
+
+function parseSaldoMs(saldoStr: string): number {
+  if (!saldoStr) return 0;
+  const limpo = saldoStr.trim();
+  const sinal = limpo.startsWith('-') ? -1 : 1;
+  const semSinal = limpo.replace(/^[+-]/, '').trim();
+  const [hStr, mStr] = semSinal.split(':');
+  const h = parseInt(hStr || '0', 10);
+  const m = parseInt(mStr || '0', 10);
+  return sinal * (h * 3600000 + m * 60000);
+}
+
+export async function importarHistoricoCSV(csvText: string): Promise<{ importados: number; erros: number }> {
+  const db = await abrirBancoDados();
+  const linhas = csvText.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+
+  if (linhas.length === 0) {
+    throw new Error('O arquivo CSV está vazio.');
+  }
+
+  let importados = 0;
+  let erros = 0;
+
+  // Detecta delimitador: ; ou ,
+  const primeiraLinha = linhas[0];
+  const delimitador = primeiraLinha.includes(';') ? ';' : ',';
+
+  // Parser simples para linhas CSV respeitando aspas
+  const quebrarLinhaCsv = (linha: string): string[] => {
+    const regex = new RegExp(`(?:^|${delimitador})(?:"([^"]*(?:""[^"]*)*)"|([^"${delimitador}]*))`, 'g');
+    const cols: string[] = [];
+    let match;
+    while ((match = regex.exec(linha)) !== null) {
+      let val = match[1] !== undefined ? match[1].replace(/""/g, '"') : match[2];
+      cols.push(val ? val.trim() : '');
+    }
+    return cols;
+  };
+
+  const inicioLinha = linhas[0].toLowerCase().includes('data') ? 1 : 0;
+
+  for (let i = inicioLinha; i < linhas.length; i++) {
+    const linha = linhas[i];
+    if (linha.toLowerCase().includes('saldo total') || !linha.trim()) continue;
+
+    const colunas = quebrarLinhaCsv(linha);
+    if (colunas.length < 2) continue;
+
+    try {
+      const data = colunas[0];
+      const tipo = colunas[1]?.toLowerCase();
+
+      if (!data || data === '""') continue;
+
+      let registro: RegistroHistorico;
+      const baseId = Date.now() + i * 10;
+
+      if (tipo === 'compensação' || tipo === 'compensacao' || tipo === 'ajuste') {
+        const saldoStr = colunas[6] || '';
+        const saldoMs = parseSaldoMs(saldoStr);
+        const descricao = colunas[7] || '';
+
+        registro = {
+          id: baseId,
+          data,
+          entrada: null,
+          saidaAlmoco: null,
+          retornoAlmoco: null,
+          saidaDia: null,
+          isCompensacao: true,
+          saldoCompensacao: saldoMs,
+          descricao,
+        };
+      } else {
+        const entrada = parseHoraParaTimestamp(data, colunas[2]);
+        const saidaAlmoco = parseHoraParaTimestamp(data, colunas[3]);
+        const retornoAlmoco = parseHoraParaTimestamp(data, colunas[4]);
+        const saidaDia = parseHoraParaTimestamp(data, colunas[5]);
+        const descricao = colunas[7] || '';
+
+        registro = {
+          id: baseId,
+          data,
+          entrada,
+          saidaAlmoco,
+          retornoAlmoco,
+          saidaDia,
+          descricao,
+        };
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction('historico', 'readwrite');
+        const store = transaction.objectStore('historico');
+        const req = store.add(registro);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+
+      importados++;
+    } catch (e) {
+      console.warn('Erro ao processar linha CSV:', linha, e);
+      erros++;
+    }
+  }
+
+  return { importados, erros };
 }
