@@ -346,7 +346,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useTimesheet } from '@/composables/useTimesheet';
 import ChangeTheme from '@/components/ChangeTheme.vue';
 
@@ -502,9 +502,5 @@ const confirmarCancelarDia = async () => {
 onMounted(() => {
   inicializar();
   iniciarRelogio();
-});
-
-onUnmounted(() => {
-  pararRelogio();
 });
 </script>

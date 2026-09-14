@@ -3,25 +3,96 @@ import {
   DadosPonto,
   ConfigFinanceira,
   carregarEstado,
+  carregarEstadoSync,
   salvarEstado,
+  salvarEstadoSync,
   arquivarRegistroNoHistorico,
   obterCargaHoraria,
   obterTempoAlmoco,
   obterConfigFinanceira,
   formatarDuracao,
+  formatarDuracaoCurta,
   formatarHora,
 } from '@/services/timesheetStorage';
 
-const dadosPonto = ref<DadosPonto>({
-  estado: 0,
-  inicioDia: null,
-  inicioAlmoco: null,
-  fimAlmoco: null,
-});
-
+// Estado global mantido na memória e inicializado imediatamente via localStorage
+const dadosPonto = ref<DadosPonto>(carregarEstadoSync());
 const configFinanceira = ref<ConfigFinanceira>(obterConfigFinanceira());
 const now = ref<Date>(new Date());
 let timerInterval: number | null = null;
+
+// Atualização de título do navegador para visualização em segundo plano/outras abas
+const atualizarTituloNavegador = () => {
+  if (typeof document === 'undefined') return;
+  switch (dadosPonto.value.estado) {
+    case 1:
+      document.title = `▶ [1º Turno] ${formatarHora(dadosPonto.value.inicioDia)} • Ponto`;
+      break;
+    case 2:
+      document.title = `☕ [Almoço] ${formatarHora(dadosPonto.value.inicioAlmoco)} • Ponto`;
+      break;
+    case 3:
+      document.title = `▶ [2º Turno] Em andamento • Ponto`;
+      break;
+    default:
+      document.title = 'Controle de Ponto';
+  }
+};
+
+const tickRelogio = () => {
+  now.value = new Date();
+  atualizarTituloNavegador();
+};
+
+const iniciarRelogio = () => {
+  if (!timerInterval) {
+    tickRelogio();
+    timerInterval = window.setInterval(tickRelogio, 1000);
+  }
+};
+
+const pararRelogio = () => {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+};
+
+// Listeners globais de segundo plano e sincronização entre abas/telas
+if (typeof window !== 'undefined') {
+  // Quando o app volta ao primeiro plano (desbloqueio do celular, foco na aba, retorno de app)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      tickRelogio();
+      const sincronizado = carregarEstadoSync();
+      if (sincronizado && (sincronizado.estado > 0 || sincronizado.inicioDia)) {
+        dadosPonto.value = sincronizado;
+      }
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    tickRelogio();
+    const sincronizado = carregarEstadoSync();
+    if (sincronizado && (sincronizado.estado > 0 || sincronizado.inicioDia)) {
+      dadosPonto.value = sincronizado;
+    }
+  });
+
+  window.addEventListener('pageshow', () => {
+    tickRelogio();
+  });
+
+  // Sincronização entre múltiplas abas abertas
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'ponto_eletronico_estado_atual' && e.newValue) {
+      try {
+        dadosPonto.value = JSON.parse(e.newValue);
+        tickRelogio();
+      } catch {}
+    }
+  });
+}
 
 export function useTimesheet() {
   const cargaHoraria = ref<number>(obterCargaHoraria());
@@ -35,28 +106,27 @@ export function useTimesheet() {
 
   const inicializar = async () => {
     recarregarConfiguracoes();
+
+    // 1. Prioriza o estado síncrono que já está no ref ou no localStorage
+    const local = carregarEstadoSync();
+    if (local.estado > 0 || local.inicioDia) {
+      dadosPonto.value = local;
+      tickRelogio();
+      return;
+    }
+
+    // 2. Se local estiver vazio, tenta carregar do IndexedDB como fallback
     try {
       const estadoSalvo = await carregarEstado();
-      dadosPonto.value = estadoSalvo;
+      if (estadoSalvo && (estadoSalvo.estado > 0 || estadoSalvo.inicioDia)) {
+        dadosPonto.value = estadoSalvo;
+        salvarEstadoSync(estadoSalvo);
+      }
     } catch (e) {
       console.error('Erro ao carregar estado inicial:', e);
     }
-  };
 
-  const iniciarRelogio = () => {
-    if (!timerInterval) {
-      now.value = new Date();
-      timerInterval = window.setInterval(() => {
-        now.value = new Date();
-      }, 1000);
-    }
-  };
-
-  const pararRelogio = () => {
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      timerInterval = null;
-    }
+    tickRelogio();
   };
 
   // Formatações do relógio principal
@@ -238,16 +308,25 @@ export function useTimesheet() {
         };
         break;
       case 1:
-        dadosPonto.value.estado = 1;
-        dadosPonto.value.inicioDia = timestamp;
+        dadosPonto.value = {
+          ...dadosPonto.value,
+          estado: 1,
+          inicioDia: timestamp,
+        };
         break;
       case 2:
-        dadosPonto.value.estado = 2;
-        dadosPonto.value.inicioAlmoco = timestamp;
+        dadosPonto.value = {
+          ...dadosPonto.value,
+          estado: 2,
+          inicioAlmoco: timestamp,
+        };
         break;
       case 3:
-        dadosPonto.value.estado = 3;
-        dadosPonto.value.fimAlmoco = timestamp;
+        dadosPonto.value = {
+          ...dadosPonto.value,
+          estado: 3,
+          fimAlmoco: timestamp,
+        };
         break;
       case 4: // Finalizar dia
         await arquivarRegistroNoHistorico(copia, timestamp);
@@ -260,7 +339,9 @@ export function useTimesheet() {
         break;
     }
 
+    salvarEstadoSync(dadosPonto.value);
     await salvarEstado(dadosPonto.value);
+    tickRelogio();
   };
 
   // Seletor direto de etapa (permite voltar ou avançar)
@@ -270,17 +351,26 @@ export function useTimesheet() {
 
     // Se estiver voltando de almoço (2) para turno 1 (1)
     if (etapaAlvo === 1) {
-      dadosPonto.value.estado = 1;
-      if (!dadosPonto.value.inicioDia) dadosPonto.value.inicioDia = agora;
+      dadosPonto.value = {
+        ...dadosPonto.value,
+        estado: 1,
+        inicioDia: dadosPonto.value.inicioDia || agora,
+      };
     } else if (etapaAlvo === 2) {
-      dadosPonto.value.estado = 2;
-      if (!dadosPonto.value.inicioDia) dadosPonto.value.inicioDia = agora - 4 * 3600000;
-      if (!dadosPonto.value.inicioAlmoco) dadosPonto.value.inicioAlmoco = agora;
+      dadosPonto.value = {
+        ...dadosPonto.value,
+        estado: 2,
+        inicioDia: dadosPonto.value.inicioDia || agora - 4 * 3600000,
+        inicioAlmoco: dadosPonto.value.inicioAlmoco || agora,
+      };
     } else if (etapaAlvo === 3) {
-      dadosPonto.value.estado = 3;
-      if (!dadosPonto.value.inicioDia) dadosPonto.value.inicioDia = agora - 5 * 3600000;
-      if (!dadosPonto.value.inicioAlmoco) dadosPonto.value.inicioAlmoco = agora - 3600000;
-      if (!dadosPonto.value.fimAlmoco) dadosPonto.value.fimAlmoco = agora;
+      dadosPonto.value = {
+        ...dadosPonto.value,
+        estado: 3,
+        inicioDia: dadosPonto.value.inicioDia || agora - 5 * 3600000,
+        inicioAlmoco: dadosPonto.value.inicioAlmoco || agora - 3600000,
+        fimAlmoco: dadosPonto.value.fimAlmoco || agora,
+      };
     } else if (etapaAlvo === 0) {
       dadosPonto.value = {
         estado: 0,
@@ -290,7 +380,9 @@ export function useTimesheet() {
       };
     }
 
+    salvarEstadoSync(dadosPonto.value);
     await salvarEstado(dadosPonto.value);
+    tickRelogio();
   };
 
   const cancelarDiaAtual = async () => {
@@ -301,7 +393,9 @@ export function useTimesheet() {
       inicioAlmoco: null,
       fimAlmoco: null,
     };
+    salvarEstadoSync(dadosPonto.value);
     await salvarEstado(dadosPonto.value);
+    tickRelogio();
   };
 
   const atualizarPontoHoje = async (novosDados: Partial<DadosPonto>) => {
@@ -309,7 +403,9 @@ export function useTimesheet() {
       ...dadosPonto.value,
       ...novosDados,
     };
+    salvarEstadoSync(dadosPonto.value);
     await salvarEstado(dadosPonto.value);
+    tickRelogio();
   };
 
   // ---------------------------------------------------------------------------

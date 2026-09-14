@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { onMounted, computed } from 'vue'
 import { useTheme } from '@/composables/useTheme'
+import { useTimesheet } from '@/composables/useTimesheet'
 
 const { initTheme, currentTheme } = useTheme()
+const { inicializar, iniciarRelogio } = useTimesheet()
 
 const bgUrl = computed(() => {
   const base = import.meta.env.BASE_URL || './'
@@ -12,6 +14,8 @@ const bgUrl = computed(() => {
 
 onMounted(() => {
   initTheme()
+  inicializar()
+  iniciarRelogio()
 })
 </script>
 

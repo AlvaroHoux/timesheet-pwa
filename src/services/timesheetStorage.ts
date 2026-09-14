@@ -314,42 +314,118 @@ function abrirBancoDados(): Promise<IDBDatabase> {
   });
 }
 
-export async function carregarEstado(): Promise<DadosPonto> {
-  const db = await abrirBancoDados();
+const STORAGE_ESTADO_KEY = 'ponto_eletronico_estado_atual';
 
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction('estado', 'readonly');
-    const store = transaction.objectStore('estado');
-    const request = store.get('atual');
-
-    request.onsuccess = () => {
-      if (request.result) {
-        resolve(request.result as DadosPonto);
-      } else {
-        resolve({
-          estado: 0,
-          inicioDia: null,
-          inicioAlmoco: null,
-          fimAlmoco: null,
-        });
-      }
+export function salvarEstadoSync(dados: DadosPonto): void {
+  try {
+    const raw: DadosPonto = {
+      estado: Number(dados.estado) || 0,
+      inicioDia: dados.inicioDia ? Number(dados.inicioDia) : null,
+      inicioAlmoco: dados.inicioAlmoco ? Number(dados.inicioAlmoco) : null,
+      fimAlmoco: dados.fimAlmoco ? Number(dados.fimAlmoco) : null,
     };
+    localStorage.setItem(STORAGE_ESTADO_KEY, JSON.stringify(raw));
+  } catch (e) {
+    console.error('Erro ao salvar estado no localStorage:', e);
+  }
+}
 
-    request.onerror = () => reject(request.error);
-  });
+export function carregarEstadoSync(): DadosPonto {
+  try {
+    const saved = localStorage.getItem(STORAGE_ESTADO_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (typeof parsed.estado === 'number') {
+        return {
+          estado: parsed.estado,
+          inicioDia: parsed.inicioDia ? Number(parsed.inicioDia) : null,
+          inicioAlmoco: parsed.inicioAlmoco ? Number(parsed.inicioAlmoco) : null,
+          fimAlmoco: parsed.fimAlmoco ? Number(parsed.fimAlmoco) : null,
+        };
+      }
+    }
+  } catch (e) {
+    console.error('Erro ao carregar estado do localStorage:', e);
+  }
+  return {
+    estado: 0,
+    inicioDia: null,
+    inicioAlmoco: null,
+    fimAlmoco: null,
+  };
+}
+
+export function removerEstadoSync(): void {
+  try {
+    localStorage.removeItem(STORAGE_ESTADO_KEY);
+  } catch (e) {
+    console.error('Erro ao remover estado do localStorage:', e);
+  }
+}
+
+export async function carregarEstado(): Promise<DadosPonto> {
+  const doLocal = carregarEstadoSync();
+  if (doLocal.estado > 0 || doLocal.inicioDia) {
+    return doLocal;
+  }
+
+  try {
+    const db = await abrirBancoDados();
+
+    return new Promise((resolve) => {
+      try {
+        const transaction = db.transaction('estado', 'readonly');
+        const store = transaction.objectStore('estado');
+        const request = store.get('atual');
+
+        request.onsuccess = () => {
+          if (request.result && (request.result.estado > 0 || request.result.inicioDia)) {
+            salvarEstadoSync(request.result);
+            resolve(request.result as DadosPonto);
+          } else {
+            resolve(doLocal);
+          }
+        };
+
+        request.onerror = () => resolve(doLocal);
+      } catch {
+        resolve(doLocal);
+      }
+    });
+  } catch {
+    return doLocal;
+  }
 }
 
 export async function salvarEstado(dados: DadosPonto): Promise<void> {
-  const db = await abrirBancoDados();
+  // 1. Salva de forma síncrona e imediata no localStorage
+  salvarEstadoSync(dados);
 
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction('estado', 'readwrite');
-    const store = transaction.objectStore('estado');
-    const request = store.put(dados, 'atual');
+  // 2. Salva no IndexedDB com objeto limpo (sem Proxy do Vue)
+  try {
+    const db = await abrirBancoDados();
+    const dadosLimpos: DadosPonto = {
+      estado: Number(dados.estado) || 0,
+      inicioDia: dados.inicioDia ? Number(dados.inicioDia) : null,
+      inicioAlmoco: dados.inicioAlmoco ? Number(dados.inicioAlmoco) : null,
+      fimAlmoco: dados.fimAlmoco ? Number(dados.fimAlmoco) : null,
+    };
 
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
+    return new Promise((resolve) => {
+      try {
+        const transaction = db.transaction('estado', 'readwrite');
+        const store = transaction.objectStore('estado');
+        const request = store.put(dadosLimpos, 'atual');
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => resolve();
+      } catch {
+        resolve();
+      }
+    });
+  } catch {
+    // localStorage garante a persistência mesmo se IDB estiver indisponível
+  }
 }
 
 export async function arquivarRegistroNoHistorico(dadosPonto: DadosPonto, fimDiaTimestamp: number = Date.now()): Promise<RegistroHistorico> {
@@ -448,6 +524,7 @@ export async function removerRegistroDoHistorico(id: number): Promise<void> {
 }
 
 export async function limparTodosOsRegistros(): Promise<void> {
+  removerEstadoSync();
   const db = await abrirBancoDados();
 
   return new Promise((resolve, reject) => {
