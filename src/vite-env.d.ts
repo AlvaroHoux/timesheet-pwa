@@ -1,12 +1,9 @@
 /// <reference types="vite/client" />
+/// <reference types="vite-plugin-pwa/client" />
 
 declare const __APP_VERSION__: string
 
 interface ImportMetaEnv {
-  readonly VITE_DIRECTUS_URL?: string
-  readonly VITE_AUTH_URL?: string
-  readonly VITE_LOGIN_URL?: string
-  readonly VITE_DEFAULT_REDIRECT_URL?: string
   readonly VITE_APP_VERSION?: string
 }
 
@@ -23,4 +20,4 @@ declare module '*.vue' {
 declare module '*.css' {
   const content: { [className: string]: string }
   export default content
-}
+}
