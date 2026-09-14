@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-200 select-none">
+  <div class="min-h-screen bg-transparent text-zinc-900 dark:text-zinc-100 flex flex-col font-sans select-none">
     
     <!-- Top Header -->
     <header class="w-full max-w-lg mx-auto px-5 pt-4 pb-2 flex items-center justify-between">
@@ -21,7 +21,7 @@
       <!-- Motivador Financeiro (Se configurado salário) -->
       <div
         v-if="temSalarioConfigurado && configFinanceira.mostrarGanhos"
-        class="w-full max-w-[330px] xs:max-w-[360px] sm:max-w-[390px] p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex items-center justify-between">
+        class="w-full max-w-[330px] xs:max-w-[360px] sm:max-w-[390px] p-3 rounded-2xl bg-white/85 dark:bg-zinc-900/85 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800 shadow-xs flex items-center justify-between">
         <div class="flex items-center gap-2.5">
           <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm">
             R$
@@ -55,8 +55,8 @@
         :aria-label="`${statusInfo.title} - Horário atual ${horaFormatada}:${segundosFormatados}`"
         class="group relative w-full max-w-[330px] xs:max-w-[360px] sm:max-w-[390px] aspect-square rounded-[36px] p-6 flex flex-col items-center justify-between text-center transition-all duration-150 active:scale-[0.96] cursor-pointer focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30 border-2 shadow-xl"
         :class="[
-          'bg-white dark:bg-zinc-900',
-          'border-zinc-200 dark:border-zinc-800',
+          'bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md',
+          'border-zinc-200/80 dark:border-zinc-800',
           'hover:border-zinc-300 dark:hover:border-zinc-700',
           'shadow-zinc-200/60 dark:shadow-black/60',
         ]">
@@ -146,7 +146,7 @@
           </button>
         </div>
 
-        <div class="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+        <div class="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-zinc-100/85 dark:bg-zinc-900/85 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800">
           <button
             v-for="(etapa, idx) in etapasLista"
             :key="idx"
@@ -171,7 +171,7 @@
         <!-- Registros Button -->
         <router-link
           to="/registros"
-          class="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 flex flex-col justify-between gap-3 active:scale-[0.98] transition-all group cursor-pointer">
+          class="p-4 rounded-3xl bg-white/85 dark:bg-zinc-900/85 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 flex flex-col justify-between gap-3 active:scale-[0.98] transition-all group cursor-pointer">
           <div class="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
             <span class="material-icons text-xl">history</span>
           </div>
@@ -184,7 +184,7 @@
         <!-- Configurações Button -->
         <router-link
           to="/configuracoes"
-          class="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 flex flex-col justify-between gap-3 active:scale-[0.98] transition-all group cursor-pointer">
+          class="p-4 rounded-3xl bg-white/85 dark:bg-zinc-900/85 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 flex flex-col justify-between gap-3 active:scale-[0.98] transition-all group cursor-pointer">
           <div class="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
             <span class="material-icons text-xl">settings</span>
           </div>

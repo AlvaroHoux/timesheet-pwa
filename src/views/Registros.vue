@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-200">
+  <div class="min-h-screen bg-transparent text-zinc-900 dark:text-zinc-100 flex flex-col font-sans">
     <!-- Header -->
     <header class="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -9,8 +9,8 @@
           <span class="material-icons text-xl">arrow_back</span>
         </router-link>
         <div>
-          <h1 class="text-lg font-semibold tracking-tight">Registros</h1>
-          <p class="text-xs text-zinc-500 dark:text-zinc-400">Histórico, ajustes & ciclo do mês</p>
+          <h1 class="text-lg font-semibold tracking-tight">Registros & Ganhos</h1>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400">Histórico, ajustes & estimativa mensal</p>
         </div>
       </div>
 
@@ -22,163 +22,476 @@
     <!-- Main Content -->
     <main class="flex-1 max-w-lg w-full mx-auto px-4 py-6 flex flex-col gap-5">
 
-      <!-- Seletor de visualização de ciclo / período -->
+      <!-- Seletor / Navegador de Ciclo por Mês -->
+      <section class="p-3 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col gap-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <!-- Botão Ciclo Anterior -->
+          <button
+            type="button"
+            @click="navegarCiclo(-1)"
+            class="w-9 h-9 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 active:scale-95 transition-all cursor-pointer"
+            title="Ciclo Anterior">
+            <span class="material-icons text-lg">chevron_left</span>
+          </button>
+
+          <!-- Dropdown Seletor de Ciclo -->
+          <div class="flex-1 relative">
+            <select
+              v-model="seletorCicloValor"
+              class="w-full appearance-none bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2 px-3 pr-8 text-xs font-semibold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-center">
+              <option
+                v-for="c in listaCiclosDisponiveis"
+                :key="c.key"
+                :value="c.key">
+                Ciclo {{ c.rotulo }} ({{ c.textoFormatado }})
+              </option>
+              <option value="todos">Todos os Registros (Geral)</option>
+            </select>
+            <span class="material-icons absolute right-2.5 top-2 text-zinc-400 text-base pointer-events-none">unfold_more</span>
+          </div>
+
+          <!-- Botão Próximo Ciclo -->
+          <button
+            type="button"
+            @click="navegarCiclo(1)"
+            class="w-9 h-9 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 active:scale-95 transition-all cursor-pointer"
+            title="Próximo Ciclo">
+            <span class="material-icons text-lg">chevron_right</span>
+          </button>
+        </div>
+
+        <!-- Linha de Detalhes do Ciclo Ativo -->
+        <div class="flex items-center justify-between px-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+          <div class="flex items-center gap-1.5 font-medium truncate">
+            <span class="material-icons text-xs text-blue-500">date_range</span>
+            <span v-if="seletorCicloValor !== 'todos'">
+              Período: <strong>{{ cicloAtivo?.textoFormatado }}</strong>
+            </span>
+            <span v-else>
+              Exibindo todo o histórico acumulado
+            </span>
+          </div>
+
+          <span
+            v-if="seletorCicloValor === cicloAtualEmAberto.key"
+            class="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold text-[10px] shrink-0">
+            Ciclo Atual
+          </span>
+        </div>
+      </section>
+
+      <!-- Alternador de Abas: Registros vs Dashboard -->
       <div class="grid grid-cols-2 p-1 rounded-2xl bg-zinc-200/80 dark:bg-zinc-900 border border-zinc-300/60 dark:border-zinc-800 text-xs font-semibold">
         <button
           type="button"
-          @click="filtroCiclo = 'ciclo'"
-          class="py-2 px-3 rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
-          :class="filtroCiclo === 'ciclo' ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'">
-          <span class="material-icons text-sm">date_range</span>
-          <span>Ciclo Atual ({{ configCiclo.diaInicio }} a {{ configCiclo.diaFim }})</span>
+          @click="abaAtiva = 'registros'"
+          class="py-2.5 px-3 rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+          :class="abaAtiva === 'registros' ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'">
+          <span class="material-icons text-sm">format_list_bulleted</span>
+          <span>Registros de Ponto</span>
         </button>
 
         <button
           type="button"
-          @click="filtroCiclo = 'todos'"
-          class="py-2 px-3 rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
-          :class="filtroCiclo === 'todos' ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'">
-          <span class="material-icons text-sm">view_agenda</span>
-          <span>Todos os Registros</span>
+          @click="abaAtiva = 'dashboard'"
+          class="py-2.5 px-3 rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+          :class="abaAtiva === 'dashboard' ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-xs' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'">
+          <span class="material-icons text-sm">analytics</span>
+          <span>Dashboard & Ganhos</span>
         </button>
       </div>
 
-      <!-- Balance Card -->
-      <div class="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
-        <div>
-          <span class="text-xs uppercase tracking-wider font-semibold text-zinc-400 dark:text-zinc-500">
-            {{ filtroCiclo === 'ciclo' ? `Saldo do Ciclo (${periodoAtual.textoFormatado})` : 'Saldo Geral Acumulado' }}
-          </span>
-          <div class="text-3xl font-bold font-mono tracking-tight mt-0.5" :class="saldoFiltradoMs >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
-            {{ formatarSaldo(saldoFiltradoMs) }}
+      <!-- ============================================================= -->
+      <!-- ABA 1: REGISTROS DE PONTO                                     -->
+      <!-- ============================================================= -->
+      <div v-if="abaAtiva === 'registros'" class="flex flex-col gap-5">
+        <!-- Balance Card -->
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="text-xs uppercase tracking-wider font-semibold text-zinc-400 dark:text-zinc-500">
+              {{ seletorCicloValor === 'todos' ? 'Saldo Geral Acumulado' : `Saldo do Ciclo (${cicloAtivo?.rotulo})` }}
+            </span>
+            <div class="text-3xl font-bold font-mono tracking-tight mt-0.5" :class="saldoFiltradoMs >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+              {{ formatarSaldo(saldoFiltradoMs) }}
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-zinc-400 dark:text-zinc-500 block">Entradas</span>
+            <span class="text-lg font-bold text-zinc-700 dark:text-zinc-300 font-mono">{{ registrosFiltrados.length }}</span>
           </div>
         </div>
-        <div class="text-right">
-          <span class="text-xs text-zinc-400 dark:text-zinc-500 block">Entradas</span>
-          <span class="text-lg font-bold text-zinc-700 dark:text-zinc-300 font-mono">{{ registrosFiltrados.length }}</span>
+
+        <!-- Action Buttons: + Novo Ajuste, Exportar CSV, Importar CSV -->
+        <div class="grid grid-cols-3 gap-2">
+          <!-- Novo Ajuste -->
+          <button
+            type="button"
+            @click="abrirModalNovoAjuste"
+            class="py-2.5 px-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer">
+            <span class="material-icons text-base">add_circle_outline</span>
+            <span>Ajuste</span>
+          </button>
+
+          <!-- Exportar CSV -->
+          <button
+            type="button"
+            @click="exportarCSV"
+            :disabled="registrosFiltrados.length === 0"
+            class="py-2.5 px-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+            <span class="material-icons text-base">download</span>
+            <span>{{ seletorCicloValor === 'todos' ? 'Exportar Tudo' : 'Exportar Ciclo' }}</span>
+          </button>
+
+          <!-- Importar CSV -->
+          <label
+            class="py-2.5 px-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer text-center">
+            <span class="material-icons text-base">upload_file</span>
+            <span>Importar</span>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              @change="handleImportarCSV"
+              class="hidden" />
+          </label>
         </div>
-      </div>
 
-      <!-- Action Buttons: + Novo Ajuste, Exportar CSV, Importar CSV -->
-      <div class="grid grid-cols-3 gap-2">
-        <!-- Novo Ajuste -->
-        <button
-          type="button"
-          @click="abrirModalNovoAjuste"
-          class="py-2.5 px-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer">
-          <span class="material-icons text-base">add_circle_outline</span>
-          <span>Ajuste</span>
-        </button>
-
-        <!-- Exportar CSV -->
-        <button
-          type="button"
-          @click="exportarCSV"
-          :disabled="registrosFiltrados.length === 0"
-          class="py-2.5 px-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-          <span class="material-icons text-base">download</span>
-          <span>{{ filtroCiclo === 'ciclo' ? 'Exportar Ciclo' : 'Exportar Tudo' }}</span>
-        </button>
-
-        <!-- Importar CSV -->
-        <label
-          class="py-2.5 px-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer text-center">
-          <span class="material-icons text-base">upload_file</span>
-          <span>Importar</span>
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            @change="handleImportarCSV"
-            class="hidden" />
-        </label>
-      </div>
-
-      <!-- Feedback de Importação / Operação -->
-      <div
-        v-if="mensagemFeedback"
-        class="p-3 rounded-2xl text-xs font-medium flex items-center gap-2 border"
-        :class="tipoFeedback === 'sucesso' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-500/20'">
-        <span class="material-icons text-sm">{{ tipoFeedback === 'sucesso' ? 'check_circle' : 'error_outline' }}</span>
-        <span>{{ mensagemFeedback }}</span>
-      </div>
-
-      <!-- Empty State -->
-      <div v-if="registrosFiltrados.length === 0" class="flex-1 flex flex-col items-center justify-center py-16 text-center text-zinc-400 dark:text-zinc-500">
-        <span class="material-icons text-5xl mb-3 text-zinc-300 dark:text-zinc-700">history_toggle_off</span>
-        <p class="text-base font-medium text-zinc-600 dark:text-zinc-300">
-          {{ filtroCiclo === 'ciclo' ? `Nenhum registro no ciclo atual (${periodoAtual.textoFormatado})` : 'Nenhum registro encontrado' }}
-        </p>
-        <p class="text-xs mt-1 max-w-xs">Ao finalizar seus dias ou adicionar ajustes manuais, eles aparecerão salvos localmente aqui.</p>
-      </div>
-
-      <!-- History List -->
-      <div v-else class="flex flex-col gap-3">
+        <!-- Feedback de Importação / Operação -->
         <div
-          v-for="item in registrosFiltrados"
-          :key="item.id"
-          class="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all flex flex-col gap-3 shadow-xs">
-          
-          <!-- Top row: Date, Type, Balance, and Actions -->
-          <div class="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80 pb-2.5">
-            <div class="flex items-center gap-2">
-              <span class="material-icons text-zinc-400 text-sm">calendar_today</span>
-              <span class="font-semibold text-sm">{{ item.data }}</span>
-              <span v-if="item.isCompensacao" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-                Ajuste
-              </span>
+          v-if="mensagemFeedback"
+          class="p-3 rounded-2xl text-xs font-medium flex items-center gap-2 border"
+          :class="tipoFeedback === 'sucesso' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-500/20'">
+          <span class="material-icons text-sm">{{ tipoFeedback === 'sucesso' ? 'check_circle' : 'error_outline' }}</span>
+          <span>{{ mensagemFeedback }}</span>
+        </div>
+
+        <!-- Empty State -->
+        <div v-if="registrosFiltrados.length === 0" class="flex-1 flex flex-col items-center justify-center py-16 text-center text-zinc-400 dark:text-zinc-500">
+          <span class="material-icons text-5xl mb-3 text-zinc-300 dark:text-zinc-700">history_toggle_off</span>
+          <p class="text-base font-medium text-zinc-600 dark:text-zinc-300">
+            {{ seletorCicloValor === 'todos' ? 'Nenhum registro encontrado' : `Nenhum registro no ciclo (${cicloAtivo?.textoFormatado})` }}
+          </p>
+          <p class="text-xs mt-1 max-w-xs">Ao finalizar seus dias ou adicionar ajustes manuais, eles aparecerão salvos localmente aqui.</p>
+        </div>
+
+        <!-- History List -->
+        <div v-else class="flex flex-col gap-3">
+          <div
+            v-for="item in registrosFiltrados"
+            :key="item.id"
+            class="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all flex flex-col gap-3 shadow-xs">
+            
+            <!-- Top row: Date, Type, Balance, and Actions -->
+            <div class="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80 pb-2.5">
+              <div class="flex items-center gap-2">
+                <span class="material-icons text-zinc-400 text-sm">calendar_today</span>
+                <span class="font-semibold text-sm">{{ item.data }}</span>
+                <span v-if="item.isCompensacao" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                  Ajuste
+                </span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <span
+                  class="text-xs font-mono font-bold px-2 py-0.5 rounded-lg"
+                  :class="calcularSaldo(item) >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'">
+                  {{ formatarSaldo(calcularSaldo(item)) }}
+                </span>
+
+                <!-- Editar -->
+                <button
+                  @click="abrirModalEditarRegistro(item)"
+                  class="text-zinc-400 hover:text-blue-500 active:scale-95 transition-colors p-1 cursor-pointer"
+                  title="Editar este registro">
+                  <span class="material-icons text-base">edit</span>
+                </button>
+
+                <!-- Excluir -->
+                <button
+                  @click="excluirItem(item.id)"
+                  class="text-zinc-400 hover:text-rose-500 active:scale-95 transition-colors p-1 cursor-pointer"
+                  title="Excluir este registro">
+                  <span class="material-icons text-base">delete_outline</span>
+                </button>
+              </div>
             </div>
 
-            <div class="flex items-center gap-2">
-              <span
-                class="text-xs font-mono font-bold px-2 py-0.5 rounded-lg"
-                :class="calcularSaldo(item) >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'">
-                {{ formatarSaldo(calcularSaldo(item)) }}
-              </span>
-
-              <!-- Editar -->
-              <button
-                @click="abrirModalEditarRegistro(item)"
-                class="text-zinc-400 hover:text-blue-500 active:scale-95 transition-colors p-1 cursor-pointer"
-                title="Editar este registro">
-                <span class="material-icons text-base">edit</span>
-              </button>
-
-              <!-- Excluir -->
-              <button
-                @click="excluirItem(item.id)"
-                class="text-zinc-400 hover:text-rose-500 active:scale-95 transition-colors p-1 cursor-pointer"
-                title="Excluir este registro">
-                <span class="material-icons text-base">delete_outline</span>
-              </button>
+            <!-- Descrição do Ajuste / Observação -->
+            <div v-if="item.descricao" class="text-xs text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800/50 p-2.5 rounded-xl flex items-start gap-1.5">
+              <span class="material-icons text-zinc-400 text-sm mt-0.5">info</span>
+              <span>{{ item.descricao }}</span>
             </div>
-          </div>
 
-          <!-- Descrição do Ajuste / Observação -->
-          <div v-if="item.descricao" class="text-xs text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800/50 p-2.5 rounded-xl flex items-start gap-1.5">
-            <span class="material-icons text-zinc-400 text-sm mt-0.5">info</span>
-            <span>{{ item.descricao }}</span>
-          </div>
-
-          <!-- Bottom row: Punch Times for Normal Days -->
-          <div v-if="!item.isCompensacao" class="grid grid-cols-4 gap-2 text-center text-xs">
-            <div class="p-2 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50">
-              <span class="text-[10px] text-zinc-400 block">Entrada</span>
-              <span class="font-mono font-medium text-zinc-700 dark:text-zinc-200">{{ formatarHora(item.entrada) }}</span>
-            </div>
-            <div class="p-2 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50">
-              <span class="text-[10px] text-zinc-400 block">Almoço</span>
-              <span class="font-mono font-medium text-zinc-700 dark:text-zinc-200">{{ formatarHora(item.saidaAlmoco) }}</span>
-            </div>
-            <div class="p-2 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50">
-              <span class="text-[10px] text-zinc-400 block">Retorno</span>
-              <span class="font-mono font-medium text-zinc-700 dark:text-zinc-200">{{ formatarHora(item.retornoAlmoco) }}</span>
-            </div>
-            <div class="p-2 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50">
-              <span class="text-[10px] text-zinc-400 block">Saída</span>
-              <span class="font-mono font-medium text-zinc-700 dark:text-zinc-200">{{ formatarHora(item.saidaDia) }}</span>
+            <!-- Bottom row: Punch Times for Normal Days -->
+            <div v-if="!item.isCompensacao" class="grid grid-cols-4 gap-2 text-center text-xs">
+              <div class="p-2 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50">
+                <span class="text-[10px] text-zinc-400 block">Entrada</span>
+                <span class="font-mono font-medium text-zinc-700 dark:text-zinc-200">{{ formatarHora(item.entrada) }}</span>
+              </div>
+              <div class="p-2 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50">
+                <span class="text-[10px] text-zinc-400 block">Almoço</span>
+                <span class="font-mono font-medium text-zinc-700 dark:text-zinc-200">{{ formatarHora(item.saidaAlmoco) }}</span>
+              </div>
+              <div class="p-2 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50">
+                <span class="text-[10px] text-zinc-400 block">Retorno</span>
+                <span class="font-mono font-medium text-zinc-700 dark:text-zinc-200">{{ formatarHora(item.retornoAlmoco) }}</span>
+              </div>
+              <div class="p-2 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50">
+                <span class="text-[10px] text-zinc-400 block">Saída</span>
+                <span class="font-mono font-medium text-zinc-700 dark:text-zinc-200">{{ formatarHora(item.saidaDia) }}</span>
+              </div>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- ============================================================= -->
+      <!-- ABA 2: DASHBOARD & ESTIMATIVA DE GANHOS                       -->
+      <!-- ============================================================= -->
+      <div v-else class="flex flex-col gap-5">
+        <!-- Aviso se estiver em 'Todos os Registros' -->
+        <div v-if="seletorCicloValor === 'todos'" class="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm text-center flex flex-col items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+            <span class="material-icons text-2xl">event_note</span>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Selecione um Ciclo Mensal</h3>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs leading-relaxed">
+              O fechamento financeiro e estimativa de proventos são calculados individualmente por ciclo.
+            </p>
+          </div>
+          <button
+            type="button"
+            @click="seletorCicloValor = cicloAtualEmAberto.key"
+            class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs cursor-pointer active:scale-95 transition-all">
+            Ver Ciclo Atual ({{ cicloAtualEmAberto.rotulo }})
+          </button>
+        </div>
+
+        <!-- Painel do Ciclo Específico -->
+        <template v-else>
+          <!-- Card de Salário Base do Ciclo (Isolado e Customizável) -->
+          <div class="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                  Salário Base do Ciclo
+                </span>
+                <span
+                  class="px-2 py-0.2 text-[10px] font-bold rounded-full"
+                  :class="salarioDoCicloInfo.isCustomizado ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'">
+                  {{ salarioDoCicloInfo.isCustomizado ? 'Personalizado deste mês' : 'Configuração Geral' }}
+                </span>
+              </div>
+              <div class="text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100 mt-0.5">
+                {{ formatarMoeda(salarioDoCicloInfo.salario) }}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              @click="abrirModalSalarioCiclo"
+              class="py-2 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer">
+              <span class="material-icons text-sm">edit</span>
+              <span>Definir Salário</span>
+            </button>
+          </div>
+
+          <!-- Hero Card: Estimativa Total Bruta -->
+          <div class="p-5 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 shadow-sm flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs uppercase tracking-wider font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <span class="material-icons text-sm">payments</span>
+                <span>Previsão de Ganhos Brutos</span>
+              </span>
+              <span class="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+                {{ cicloAtivo?.rotulo }}
+              </span>
+            </div>
+
+            <div class="text-4xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
+              {{ formatarMoeda(estimativas.totalBruto) }}
+            </div>
+
+            <p class="text-[11px] text-zinc-500 dark:text-zinc-400">
+              Salário base + Horas Extras (50% e 100%) + DSR estimado sobre extras
+            </p>
+
+            <!-- Quick Chips -->
+            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-emerald-500/15 text-center">
+              <div class="p-2 rounded-2xl bg-white/70 dark:bg-zinc-900/70 border border-zinc-200/50 dark:border-zinc-800">
+                <span class="text-[10px] text-zinc-400 block">Base</span>
+                <span class="text-xs font-bold font-mono text-zinc-700 dark:text-zinc-300">{{ formatarMoeda(salarioDoCicloInfo.salario) }}</span>
+              </div>
+              <div class="p-2 rounded-2xl bg-white/70 dark:bg-zinc-900/70 border border-zinc-200/50 dark:border-zinc-800">
+                <span class="text-[10px] text-zinc-400 block">Extras</span>
+                <span class="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">{{ formatarMoeda(estimativas.valorExtras50 + estimativas.valorExtras100) }}</span>
+              </div>
+              <div class="p-2 rounded-2xl bg-white/70 dark:bg-zinc-900/70 border border-zinc-200/50 dark:border-zinc-800">
+                <span class="text-[10px] text-zinc-400 block">DSR s/ Extras</span>
+                <span class="text-xs font-bold font-mono text-blue-600 dark:text-blue-400">{{ formatarMoeda(estimativas.valorDsr) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detalhamento dos Proventos -->
+          <div class="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col gap-3">
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              Detalhamento de Proventos
+            </h4>
+
+            <div class="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800 text-xs">
+              <!-- Salário Base -->
+              <div class="py-2.5 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-icons text-zinc-400 text-base">account_balance_wallet</span>
+                  <span class="text-zinc-700 dark:text-zinc-300">Salário Contratual</span>
+                </div>
+                <span class="font-mono font-semibold">{{ formatarMoeda(salarioDoCicloInfo.salario) }}</span>
+              </div>
+
+              <!-- Horas Extras 50% -->
+              <div class="py-2.5 flex items-center justify-between">
+                <div class="flex flex-col">
+                  <div class="flex items-center gap-2">
+                    <span class="material-icons text-emerald-500 text-base">alarm_add</span>
+                    <span class="text-zinc-700 dark:text-zinc-300">Horas Extras 50%</span>
+                  </div>
+                  <span class="text-[11px] text-zinc-400 pl-6">{{ estimativas.horasExtras50Formatado }} acumulados</span>
+                </div>
+                <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                  + {{ formatarMoeda(estimativas.valorExtras50) }}
+                </span>
+              </div>
+
+              <!-- Horas Extras 100% -->
+              <div class="py-2.5 flex items-center justify-between">
+                <div class="flex flex-col">
+                  <div class="flex items-center gap-2">
+                    <span class="material-icons text-emerald-500 text-base">weekend</span>
+                    <span class="text-zinc-700 dark:text-zinc-300">Extras 100% (FDS/Feriados)</span>
+                  </div>
+                  <span class="text-[11px] text-zinc-400 pl-6">{{ estimativas.horasExtras100Formatado }} trabalhados</span>
+                </div>
+                <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                  + {{ formatarMoeda(estimativas.valorExtras100) }}
+                </span>
+              </div>
+
+              <!-- DSR sobre Horas Extras -->
+              <div class="py-2.5 flex items-center justify-between">
+                <div class="flex flex-col">
+                  <div class="flex items-center gap-2">
+                    <span class="material-icons text-blue-500 text-base">savings</span>
+                    <span class="text-zinc-700 dark:text-zinc-300">DSR sobre Horas Extras</span>
+                  </div>
+                  <span class="text-[11px] text-zinc-400 pl-6">Reflexo em repousos remunerados (CLT)</span>
+                </div>
+                <span class="font-mono font-semibold text-blue-600 dark:text-blue-400">
+                  + {{ formatarMoeda(estimativas.valorDsr) }}
+                </span>
+              </div>
+
+              <!-- Banco de Horas (Saldo Líquido) -->
+              <div class="py-2.5 flex items-center justify-between">
+                <div class="flex flex-col">
+                  <div class="flex items-center gap-2">
+                    <span class="material-icons text-purple-500 text-base">timelapse</span>
+                    <span class="text-zinc-700 dark:text-zinc-300">Equivalência Saldo em Horas</span>
+                  </div>
+                  <span class="text-[11px] text-zinc-400 pl-6 font-mono font-semibold">
+                    Saldo: {{ formatarSaldo(saldoFiltradoMs) }}
+                  </span>
+                </div>
+                <span
+                  class="font-mono font-semibold"
+                  :class="saldoFiltradoMs >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+                  {{ formatarMoeda(estimativas.valorSaldoBanco) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Estimativa de Deduções & Líquido -->
+          <div class="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col gap-3">
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              Previsão de Descontos & Líquido
+            </h4>
+
+            <div class="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800 text-xs">
+              <!-- INSS Estimado -->
+              <div class="py-2.5 flex items-center justify-between">
+                <div class="flex flex-col">
+                  <div class="flex items-center gap-2">
+                    <span class="material-icons text-rose-500 text-base">receipt_long</span>
+                    <span class="text-zinc-700 dark:text-zinc-300">INSS Estimado</span>
+                  </div>
+                  <span class="text-[11px] text-zinc-400 pl-6">
+                    Tabela Oficial Progressiva CLT (~{{ estimativas.aliquotaEfetivaInss }}%)
+                  </span>
+                </div>
+                <span class="font-mono font-semibold text-rose-600 dark:text-rose-400">
+                  - {{ formatarMoeda(estimativas.inssEstimado) }}
+                </span>
+              </div>
+
+              <!-- Total Líquido -->
+              <div class="py-3 flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/40 -mx-5 px-5">
+                <div class="flex items-center gap-2">
+                  <span class="material-icons text-emerald-500 text-lg">check_circle</span>
+                  <span class="font-bold text-sm text-zinc-900 dark:text-white">Estimativa Líquida</span>
+                </div>
+                <span class="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                  {{ formatarMoeda(estimativas.totalLiquido) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Jornada de Trabalho & Estatísticas -->
+          <div class="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col gap-3.5">
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              Jornada & Estatísticas do Ciclo
+            </h4>
+
+            <!-- Barra de Progresso Horas Trabalhadas vs Previstas -->
+            <div class="flex flex-col gap-1.5">
+              <div class="flex justify-between text-xs font-medium">
+                <span class="text-zinc-600 dark:text-zinc-300">Horas Trabalhadas</span>
+                <span class="font-mono font-semibold text-zinc-900 dark:text-white">
+                  {{ estimativas.totalHorasTrabalhadasFormatado }}
+                </span>
+              </div>
+
+              <div class="w-full h-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                <div
+                  class="h-full bg-blue-500 rounded-full transition-all duration-300"
+                  :style="{ width: `${Math.min(100, estimativas.percentualJornadaCumprida)}%` }"></div>
+              </div>
+
+              <div class="flex justify-between text-[11px] text-zinc-400">
+                <span>Progresso: {{ estimativas.percentualJornadaCumprida }}%</span>
+                <span>Base: {{ formatarMoeda(estimativas.valorHora) }}/h</span>
+              </div>
+            </div>
+
+            <!-- Mini Grid de Métricas -->
+            <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50">
+                <span class="text-[10px] text-zinc-400 block">Dias com Registro</span>
+                <span class="text-base font-bold font-mono text-zinc-800 dark:text-zinc-200">
+                  {{ estimativas.diasTrabalhados }} dias
+                </span>
+              </div>
+
+              <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50">
+                <span class="text-[10px] text-zinc-400 block">Média Diária Trabalhada</span>
+                <span class="text-base font-bold font-mono text-zinc-800 dark:text-zinc-200">
+                  {{ estimativas.mediaDiariaTrabalhadaFormatada }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
     </main>
 
@@ -264,7 +577,7 @@
           <input
             v-model="formAjuste.descricao"
             type="text"
-            placeholder="Ex: Empresa liberou 4h a compensar"
+            placeholder="Ex: Folga compensatória autorizada"
             class="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
 
@@ -415,6 +728,69 @@
         </div>
       </div>
     </div>
+
+    <!-- MODAL: DEFINIR SALÁRIO DO CICLO -->
+    <div
+      v-if="modalSalarioCicloAberto"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div class="w-full max-w-sm rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-icons text-emerald-500">payments</span>
+            <h2 class="text-base font-semibold text-zinc-900 dark:text-white">Salário do Ciclo</h2>
+          </div>
+          <button @click="modalSalarioCicloAberto = false" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+          Defina o salário base exclusivo para o <strong>Ciclo {{ cicloAtivo?.rotulo }}</strong>.
+          Alterações futuras nas configurações gerais não modificarão os valores definidos para este ciclo.
+        </p>
+
+        <div>
+          <label class="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+            Salário para este ciclo (R$)
+          </label>
+          <div class="relative">
+            <span class="absolute left-3 top-2.5 text-sm font-bold text-zinc-400">R$</span>
+            <input
+              v-model.number="formSalarioCicloValor"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0,00"
+              class="w-full pl-10 pr-3 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-mono text-base font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2 pt-2">
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              @click="modalSalarioCicloAberto = false"
+              class="flex-1 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
+              Cancelar
+            </button>
+            <button
+              type="button"
+              @click="confirmarSalarioDoCiclo"
+              class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer">
+              Salvar p/ este Ciclo
+            </button>
+          </div>
+
+          <button
+            v-if="salarioDoCicloInfo.isCustomizado"
+            type="button"
+            @click="restaurarSalarioPadrao"
+            class="w-full py-2 rounded-xl text-xs text-zinc-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer">
+            Restaurar padrão geral ({{ formatarMoeda(configFinancas.salarioMensal) }})
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -431,22 +807,43 @@ import {
   obterCargaHoraria,
   obterConfigCiclo,
   calcularPeriodoCiclo,
+  calcularPeriodoCicloPorAnoMes,
+  listarCiclosDisponiveis,
   isDataNoPeriodo,
   ConfigCiclo,
+  obterConfigFinanceira,
+  ConfigFinanceira,
+  obterSalarioDoCiclo,
+  salvarSalarioDoCiclo,
+  removerSalarioCustomizadoDoCiclo,
   calcularSaldoRegistro,
   formatarSaldo,
   formatarHora,
+  formatarDuracaoCurta,
+  CicloInfo,
 } from '@/services/timesheetStorage';
 import ChangeTheme from '@/components/ChangeTheme.vue';
 
 const historico = ref<RegistroHistorico[]>([]);
 const cargaHoraria = ref<number>(obterCargaHoraria());
 const configCiclo = ref<ConfigCiclo>(obterConfigCiclo());
-const filtroCiclo = ref<'ciclo' | 'todos'>('ciclo');
+const configFinancas = ref<ConfigFinanceira>(obterConfigFinanceira());
+
+const abaAtiva = ref<'registros' | 'dashboard'>('registros');
+const seletorCicloValor = ref<string>(''); // Chave do ciclo (ex: '2026-09') ou 'todos'
 
 const mensagemFeedback = ref('');
 const tipoFeedback = ref<'sucesso' | 'erro'>('sucesso');
 
+// Salário do ciclo ativo
+const salarioDoCicloInfo = ref<{ salario: number; isCustomizado: boolean }>({
+  salario: 0,
+  isCustomizado: false,
+});
+const modalSalarioCicloAberto = ref(false);
+const formSalarioCicloValor = ref(0);
+
+// Modais existentes
 const modalAjusteAberto = ref(false);
 const formAjuste = ref({
   data: '',
@@ -470,21 +867,64 @@ const formEdicao = ref({
   descricao: '',
 });
 
-const carregarDados = async () => {
-  cargaHoraria.value = obterCargaHoraria();
-  configCiclo.value = obterConfigCiclo();
-  historico.value = await obterHistoricoCompleto();
-};
-
-const periodoAtual = computed(() => {
+const cicloAtualEmAberto = computed(() => {
   return calcularPeriodoCiclo(configCiclo.value.diaInicio, configCiclo.value.diaFim);
 });
 
+const listaCiclosDisponiveis = computed<CicloInfo[]>(() => {
+  return listarCiclosDisponiveis(historico.value, configCiclo.value.diaInicio, configCiclo.value.diaFim);
+});
+
+const cicloAtivo = computed<CicloInfo | null>(() => {
+  if (seletorCicloValor.value === 'todos') {
+    return null;
+  }
+  const encontrado = listaCiclosDisponiveis.value.find((c) => c.key === seletorCicloValor.value);
+  if (encontrado) return encontrado;
+
+  // Se não estiver na lista (ex: navegado), calcula dinamicamente
+  if (seletorCicloValor.value.includes('-')) {
+    const [anoStr, mesStr] = seletorCicloValor.value.split('-');
+    const ano = parseInt(anoStr, 10);
+    const mes = parseInt(mesStr, 10);
+    if (!isNaN(ano) && !isNaN(mes)) {
+      return calcularPeriodoCicloPorAnoMes(configCiclo.value.diaInicio, configCiclo.value.diaFim, ano, mes);
+    }
+  }
+
+  return cicloAtualEmAberto.value;
+});
+
+const atualizarSalarioDoCiclo = () => {
+  if (cicloAtivo.value) {
+    salarioDoCicloInfo.value = obterSalarioDoCiclo(cicloAtivo.value.key);
+  } else {
+    salarioDoCicloInfo.value = {
+      salario: configFinancas.value.salarioMensal || 0,
+      isCustomizado: false,
+    };
+  }
+};
+
+const carregarDados = async () => {
+  cargaHoraria.value = obterCargaHoraria();
+  configCiclo.value = obterConfigCiclo();
+  configFinancas.value = obterConfigFinanceira();
+  historico.value = await obterHistoricoCompleto();
+
+  if (!seletorCicloValor.value) {
+    seletorCicloValor.value = cicloAtualEmAberto.value.key;
+  }
+
+  atualizarSalarioDoCiclo();
+};
+
 const registrosFiltrados = computed(() => {
-  if (filtroCiclo.value === 'todos') {
+  if (seletorCicloValor.value === 'todos') {
     return historico.value;
   }
-  const { inicio, fim } = periodoAtual.value;
+  if (!cicloAtivo.value) return [];
+  const { inicio, fim } = cicloAtivo.value;
   return historico.value.filter((reg) => isDataNoPeriodo(reg.data, inicio, fim));
 });
 
@@ -496,6 +936,200 @@ const saldoFiltradoMs = computed(() => {
   return registrosFiltrados.value.reduce((total, item) => total + calcularSaldo(item), 0);
 });
 
+// Navegação entre ciclos (< e >)
+const navegarCiclo = (direcao: -1 | 1) => {
+  // direcao = -1: mês anterior
+  // direcao = 1: próximo mês
+  if (seletorCicloValor.value === 'todos') {
+    seletorCicloValor.value = cicloAtualEmAberto.value.key;
+    atualizarSalarioDoCiclo();
+    return;
+  }
+
+  const atual = cicloAtivo.value || cicloAtualEmAberto.value;
+  let novoMes = atual.mes + direcao;
+  let novoAno = atual.ano;
+
+  if (novoMes < 1) {
+    novoMes = 12;
+    novoAno -= 1;
+  } else if (novoMes > 12) {
+    novoMes = 1;
+    novoAno += 1;
+  }
+
+  const novaKey = `${novoAno}-${String(novoMes).padStart(2, '0')}`;
+  seletorCicloValor.value = novaKey;
+  atualizarSalarioDoCiclo();
+};
+
+// Modal de Salário do Ciclo
+const abrirModalSalarioCiclo = () => {
+  formSalarioCicloValor.value = salarioDoCicloInfo.value.salario;
+  modalSalarioCicloAberto.value = true;
+};
+
+const confirmarSalarioDoCiclo = () => {
+  if (!cicloAtivo.value) return;
+  salvarSalarioDoCiclo(cicloAtivo.value.key, formSalarioCicloValor.value);
+  atualizarSalarioDoCiclo();
+  modalSalarioCicloAberto.value = false;
+  exibirFeedback(`Salário do Ciclo ${cicloAtivo.value.rotulo} atualizado!`, 'sucesso');
+};
+
+const restaurarSalarioPadrao = () => {
+  if (!cicloAtivo.value) return;
+  removerSalarioCustomizadoDoCiclo(cicloAtivo.value.key);
+  atualizarSalarioDoCiclo();
+  modalSalarioCicloAberto.value = false;
+  exibirFeedback(`Salário do ciclo restaurado para o padrão geral!`, 'sucesso');
+};
+
+// =====================================================================
+// Cálculos do Dashboard de Ganhos
+// =====================================================================
+const estimativas = computed(() => {
+  const salarioBase = salarioDoCicloInfo.value.salario || 0;
+  const diasUteisConfig = configFinancas.value.diasUteisMes || 22;
+  const cargaHorariaHoras = cargaHoraria.value / 3600000;
+  const totalHorasEsperadasMes = diasUteisConfig * cargaHorariaHoras;
+
+  const valorHora = totalHorasEsperadasMes > 0 ? salarioBase / totalHorasEsperadasMes : 0;
+
+  let totalTrabalhadoMs = 0;
+  let horasExtras50Ms = 0;
+  let horasExtras100Ms = 0;
+  let diasTrabalhados = 0;
+
+  for (const reg of registrosFiltrados.value) {
+    if (reg.isCompensacao) {
+      if (reg.saldoCompensacao && reg.saldoCompensacao > 0) {
+        horasExtras50Ms += reg.saldoCompensacao;
+      }
+      continue;
+    }
+
+    if (reg.entrada && reg.saidaDia) {
+      let trabalhadoDiaMs = 0;
+      if (reg.saidaAlmoco && reg.retornoAlmoco) {
+        trabalhadoDiaMs = Math.max(0, reg.saidaAlmoco - reg.entrada) + Math.max(0, reg.saidaDia - reg.retornoAlmoco);
+      } else {
+        trabalhadoDiaMs = Math.max(0, reg.saidaDia - reg.entrada);
+      }
+
+      totalTrabalhadoMs += trabalhadoDiaMs;
+      if (trabalhadoDiaMs > 0) diasTrabalhados++;
+
+      // Detecta fim de semana (Sábado ou Domingo)
+      const partes = reg.data.split('/');
+      if (partes.length === 3) {
+        const diaNum = parseInt(partes[0], 10);
+        const mesNum = parseInt(partes[1], 10) - 1;
+        const anoNum = parseInt(partes[2], 10);
+        const dataObj = new Date(anoNum, mesNum, diaNum);
+        const diaSemana = dataObj.getDay();
+
+        if (diaSemana === 0 || diaSemana === 6) {
+          // Fim de semana: 100% extra
+          horasExtras100Ms += trabalhadoDiaMs;
+        } else {
+          // Dia de semana: o que passar da carga horária é 50%
+          if (trabalhadoDiaMs > cargaHoraria.value) {
+            horasExtras50Ms += (trabalhadoDiaMs - cargaHoraria.value);
+          }
+        }
+      }
+    }
+  }
+
+  // Valores calculados
+  const pctExtra50 = (configFinancas.value.adicionalExtra ?? 50) / 100;
+  const pctExtra100 = (configFinancas.value.adicionalFimDeSemana ?? 100) / 100;
+
+  const valorExtras50 = (horasExtras50Ms / 3600000) * valorHora * (1 + pctExtra50);
+  const valorExtras100 = (horasExtras100Ms / 3600000) * valorHora * (1 + pctExtra100);
+
+  // DSR sobre Horas Extras: (Total R$ Extras / Dias Úteis) * Dias Repouso (média 5 domingos/feriados)
+  const diasRepouso = 5;
+  const valorDsr = diasUteisConfig > 0 ? ((valorExtras50 + valorExtras100) / diasUteisConfig) * diasRepouso : 0;
+
+  // Valor do banco de horas no ciclo
+  const valorSaldoBanco = saldoFiltradoMs.value >= 0
+    ? (saldoFiltradoMs.value / 3600000) * valorHora * (1 + pctExtra50)
+    : (saldoFiltradoMs.value / 3600000) * valorHora;
+
+  // Total Bruto
+  const totalBruto = salarioBase + valorExtras50 + valorExtras100 + valorDsr;
+
+  // Cálculo progressivo oficial do INSS CLT (2025/2026)
+  const calcularINSS = (bruto: number): number => {
+    if (bruto <= 0) return 0;
+    const faixas = [
+      { limite: 1518.00, aliquota: 0.075 },
+      { limite: 2793.88, aliquota: 0.09 },
+      { limite: 4190.83, aliquota: 0.12 },
+      { limite: 8157.41, aliquota: 0.14 },
+    ];
+
+    let inss = 0;
+    let baseAnterior = 0;
+
+    for (const faixa of faixas) {
+      if (bruto > baseAnterior) {
+        const baseCalculo = Math.min(bruto, faixa.limite) - baseAnterior;
+        inss += baseCalculo * faixa.aliquota;
+        baseAnterior = faixa.limite;
+      } else {
+        break;
+      }
+    }
+
+    return Math.round(inss * 100) / 100;
+  };
+
+  const inssEstimado = calcularINSS(totalBruto);
+  const totalLiquido = Math.max(0, totalBruto - inssEstimado);
+  const aliquotaEfetivaInss = totalBruto > 0 ? ((inssEstimado / totalBruto) * 100).toFixed(1) : '0';
+
+  const cargaPrevistaCicloMs = diasTrabalhados * cargaHoraria.value;
+  const percentualJornadaCumprida = cargaPrevistaCicloMs > 0
+    ? Math.round((totalTrabalhadoMs / cargaPrevistaCicloMs) * 100)
+    : 0;
+
+  const mediaDiariaMs = diasTrabalhados > 0 ? Math.floor(totalTrabalhadoMs / diasTrabalhados) : 0;
+
+  return {
+    salarioBase,
+    valorHora,
+    totalTrabalhadoMs,
+    totalHorasTrabalhadasFormatado: formatarDuracaoCurta(totalTrabalhadoMs),
+    diasTrabalhados,
+    horasExtras50Ms,
+    horasExtras50Formatado: formatarDuracaoCurta(horasExtras50Ms),
+    valorExtras50,
+    horasExtras100Ms,
+    horasExtras100Formatado: formatarDuracaoCurta(horasExtras100Ms),
+    valorExtras100,
+    valorDsr,
+    valorSaldoBanco,
+    totalBruto,
+    inssEstimado,
+    aliquotaEfetivaInss,
+    totalLiquido,
+    percentualJornadaCumprida,
+    mediaDiariaTrabalhadaFormatada: formatarDuracaoCurta(mediaDiariaMs),
+  };
+});
+
+const formatarMoeda = (valor: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(valor || 0);
+};
+
 const exibirFeedback = (msg: string, tipo: 'sucesso' | 'erro' = 'sucesso') => {
   mensagemFeedback.value = msg;
   tipoFeedback.value = tipo;
@@ -506,9 +1140,9 @@ const exibirFeedback = (msg: string, tipo: 'sucesso' | 'erro' = 'sucesso') => {
 
 const exportarCSV = async () => {
   try {
-    if (filtroCiclo.value === 'ciclo') {
-      await exportarHistoricoCSV(periodoAtual.value.inicio, periodoAtual.value.fim);
-      exibirFeedback(`Registros do ciclo (${periodoAtual.value.textoFormatado}) exportados!`, 'sucesso');
+    if (cicloAtivo.value && seletorCicloValor.value !== 'todos') {
+      await exportarHistoricoCSV(cicloAtivo.value.inicio, cicloAtivo.value.fim);
+      exibirFeedback(`Registros do ciclo (${cicloAtivo.value.textoFormatado}) exportados!`, 'sucesso');
     } else {
       await exportarHistoricoCSV();
       exibirFeedback('Todos os registros exportados!', 'sucesso');

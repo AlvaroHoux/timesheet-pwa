@@ -16,7 +16,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['icon-192x192.png', 'icon-512x512.png', 'icon.png'],
+      includeAssets: ['icon-192x192.png', 'icon-512x512.png', 'icon.png', 'background.png'],
       manifest: {
         name: 'Controle de Ponto',
         short_name: 'Ponto',

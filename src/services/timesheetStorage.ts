@@ -73,52 +73,151 @@ export function salvarConfigCiclo(config: ConfigCiclo): void {
   localStorage.setItem('configCiclo', JSON.stringify(config));
 }
 
-export function calcularPeriodoCiclo(
+export interface CicloInfo {
+  key: string;            // '2026-08'
+  rotulo: string;         // 'Agosto/2026'
+  inicio: Date;
+  fim: Date;
+  textoFormatado: string; // '27/07 a 26/08/2026'
+  ano: number;
+  mes: number;            // 1-12 (mês de fechamento)
+}
+
+const NOMES_MESES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
+export function calcularPeriodoCicloPorAnoMes(
   diaInicio: number,
   diaFim: number,
-  referencia: Date = new Date()
-): { inicio: Date; fim: Date; textoFormatado: string } {
-  const anoRef = referencia.getFullYear();
-  const mesRef = referencia.getMonth(); // 0 a 11
-  const diaRef = referencia.getDate();
-
+  ano: number,
+  mes: number // 1 a 12 (mês de fechamento do ciclo)
+): CicloInfo {
+  const mesIndex = mes - 1; // 0 a 11
   let inicio: Date;
   let fim: Date;
 
   if (diaInicio <= diaFim) {
-    inicio = new Date(anoRef, mesRef, diaInicio, 0, 0, 0, 0);
-    const ultimoDiaDoMes = new Date(anoRef, mesRef + 1, 0).getDate();
-    const diaRealFim = Math.min(diaFim, ultimoDiaDoMes);
-    fim = new Date(anoRef, mesRef, diaRealFim, 23, 59, 59, 999);
+    inicio = new Date(ano, mesIndex, diaInicio, 0, 0, 0, 0);
+    const ultimoDia = new Date(ano, mesIndex + 1, 0).getDate();
+    const diaRealFim = Math.min(diaFim, ultimoDia);
+    fim = new Date(ano, mesIndex, diaRealFim, 23, 59, 59, 999);
   } else {
-    // Ex: diaInicio = 27, diaFim = 26
-    if (diaRef >= diaInicio) {
-      inicio = new Date(anoRef, mesRef, diaInicio, 0, 0, 0, 0);
-      const proximoMes = mesRef + 1;
-      const ultimoDiaProximoMes = new Date(anoRef, proximoMes + 1, 0).getDate();
-      const diaRealFim = Math.min(diaFim, ultimoDiaProximoMes);
-      fim = new Date(anoRef, proximoMes, diaRealFim, 23, 59, 59, 999);
-    } else {
-      const mesAnterior = mesRef - 1;
-      const ultimoDiaMesAnterior = new Date(anoRef, mesAnterior + 1, 0).getDate();
-      const diaRealInicio = Math.min(diaInicio, ultimoDiaMesAnterior);
-      inicio = new Date(anoRef, mesAnterior, diaRealInicio, 0, 0, 0, 0);
+    // Ciclo cruzando meses (ex: diaInicio=27, diaFim=26)
+    // O ciclo de Agosto/2026 começou em 27/07/2026 e fecha em 26/08/2026
+    const mesAnterior = mesIndex - 1;
+    const dataMesAnterior = new Date(ano, mesAnterior, 1);
+    const anoInicio = dataMesAnterior.getFullYear();
+    const mesInicio = dataMesAnterior.getMonth();
+    const ultimoDiaMesAnterior = new Date(anoInicio, mesInicio + 1, 0).getDate();
+    const diaRealInicio = Math.min(diaInicio, ultimoDiaMesAnterior);
+    inicio = new Date(anoInicio, mesInicio, diaRealInicio, 0, 0, 0, 0);
 
-      const ultimoDiaMesAtual = new Date(anoRef, mesRef + 1, 0).getDate();
-      const diaRealFim = Math.min(diaFim, ultimoDiaMesAtual);
-      fim = new Date(anoRef, mesRef, diaRealFim, 23, 59, 59, 999);
-    }
+    const ultimoDiaMesAtual = new Date(ano, mesIndex + 1, 0).getDate();
+    const diaRealFim = Math.min(diaFim, ultimoDiaMesAtual);
+    fim = new Date(ano, mesIndex, diaRealFim, 23, 59, 59, 999);
   }
 
   const formatarDataSimples = (d: Date) => {
     const dia = String(d.getDate()).padStart(2, '0');
-    const mes = String(d.getMonth() + 1).padStart(2, '0');
-    return `${dia}/${mes}`;
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return `${dia}/${m}`;
   };
 
+  const key = `${ano}-${String(mes).padStart(2, '0')}`;
+  const rotulo = `${NOMES_MESES[mesIndex]}/${ano}`;
   const textoFormatado = `${formatarDataSimples(inicio)} a ${formatarDataSimples(fim)}/${fim.getFullYear()}`;
 
-  return { inicio, fim, textoFormatado };
+  return {
+    key,
+    rotulo,
+    inicio,
+    fim,
+    textoFormatado,
+    ano,
+    mes,
+  };
+}
+
+export function calcularPeriodoCiclo(
+  diaInicio: number,
+  diaFim: number,
+  referencia: Date = new Date()
+): CicloInfo {
+  const diaRef = referencia.getDate();
+  const mesRef = referencia.getMonth() + 1; // 1 a 12
+  const anoRef = referencia.getFullYear();
+
+  if (diaInicio <= diaFim) {
+    return calcularPeriodoCicloPorAnoMes(diaInicio, diaFim, anoRef, mesRef);
+  }
+
+  // Se diaRef >= diaInicio, o ciclo em curso fechará no mês seguinte
+  if (diaRef >= diaInicio) {
+    const proximaData = new Date(anoRef, referencia.getMonth() + 1, 1);
+    return calcularPeriodoCicloPorAnoMes(
+      diaInicio,
+      diaFim,
+      proximaData.getFullYear(),
+      proximaData.getMonth() + 1
+    );
+  } else {
+    // diaRef < diaInicio, fecha neste mês
+    return calcularPeriodoCicloPorAnoMes(diaInicio, diaFim, anoRef, mesRef);
+  }
+}
+
+export function descobrirCicloDaData(dataStr: string, diaInicio: number, diaFim: number): string {
+  if (!dataStr) return '';
+  const partes = dataStr.split('/');
+  if (partes.length !== 3) return '';
+  const dia = parseInt(partes[0], 10);
+  const mes = parseInt(partes[1], 10); // 1 a 12
+  const ano = parseInt(partes[2], 10);
+
+  if (isNaN(dia) || isNaN(mes) || isNaN(ano)) return '';
+
+  if (diaInicio <= diaFim) {
+    return `${ano}-${String(mes).padStart(2, '0')}`;
+  }
+
+  if (dia >= diaInicio) {
+    const proxima = new Date(ano, mes, 1);
+    return `${proxima.getFullYear()}-${String(proxima.getMonth() + 1).padStart(2, '0')}`;
+  } else {
+    return `${ano}-${String(mes).padStart(2, '0')}`;
+  }
+}
+
+export function listarCiclosDisponiveis(
+  registros: RegistroHistorico[],
+  diaInicio: number,
+  diaFim: number
+): CicloInfo[] {
+  const ciclosMap = new Map<string, CicloInfo>();
+
+  // Sempre adiciona o ciclo atual com base na data de hoje
+  const cicloAtual = calcularPeriodoCiclo(diaInicio, diaFim, new Date());
+  ciclosMap.set(cicloAtual.key, cicloAtual);
+
+  // Vasculha todos os registros para encontrar ciclos com dados históricos
+  for (const reg of registros) {
+    if (!reg.data) continue;
+    const key = descobrirCicloDaData(reg.data, diaInicio, diaFim);
+    if (key && !ciclosMap.has(key)) {
+      const [anoStr, mesStr] = key.split('-');
+      const ano = parseInt(anoStr, 10);
+      const mes = parseInt(mesStr, 10);
+      if (!isNaN(ano) && !isNaN(mes)) {
+        const info = calcularPeriodoCicloPorAnoMes(diaInicio, diaFim, ano, mes);
+        ciclosMap.set(key, info);
+      }
+    }
+  }
+
+  // Ordena decrescente pela chave (os mais recentes primeiro)
+  return Array.from(ciclosMap.values()).sort((a, b) => b.key.localeCompare(a.key));
 }
 
 export function isDataNoPeriodo(dataStr: string, inicio: Date, fim: Date): boolean {
@@ -152,6 +251,41 @@ export function obterConfigFinanceira(): ConfigFinanceira {
 
 export function salvarConfigFinanceira(config: ConfigFinanceira): void {
   localStorage.setItem('configFinanceira', JSON.stringify(config));
+}
+
+const STORAGE_SALARIOS_CICLOS = 'salariosPorCiclo';
+
+export function obterSalariosPorCiclo(): Record<string, number> {
+  const salvo = localStorage.getItem(STORAGE_SALARIOS_CICLOS);
+  if (salvo) {
+    try {
+      return JSON.parse(salvo);
+    } catch {
+      // fallback
+    }
+  }
+  return {};
+}
+
+export function obterSalarioDoCiclo(cicloKey: string): { salario: number; isCustomizado: boolean } {
+  const salarios = obterSalariosPorCiclo();
+  if (cicloKey in salarios && typeof salarios[cicloKey] === 'number') {
+    return { salario: salarios[cicloKey], isCustomizado: true };
+  }
+  const config = obterConfigFinanceira();
+  return { salario: config.salarioMensal || 0, isCustomizado: false };
+}
+
+export function salvarSalarioDoCiclo(cicloKey: string, salario: number): void {
+  const salarios = obterSalariosPorCiclo();
+  salarios[cicloKey] = Math.max(0, salario);
+  localStorage.setItem(STORAGE_SALARIOS_CICLOS, JSON.stringify(salarios));
+}
+
+export function removerSalarioCustomizadoDoCiclo(cicloKey: string): void {
+  const salarios = obterSalariosPorCiclo();
+  delete salarios[cicloKey];
+  localStorage.setItem(STORAGE_SALARIOS_CICLOS, JSON.stringify(salarios));
 }
 
 function abrirBancoDados(): Promise<IDBDatabase> {
@@ -310,6 +444,22 @@ export async function removerRegistroDoHistorico(id: number): Promise<void> {
 
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
+  });
+}
+
+export async function limparTodosOsRegistros(): Promise<void> {
+  const db = await abrirBancoDados();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['historico', 'estado'], 'readwrite');
+    const storeHistorico = transaction.objectStore('historico');
+    const storeEstado = transaction.objectStore('estado');
+
+    storeHistorico.clear();
+    storeEstado.clear();
+
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
   });
 }
 

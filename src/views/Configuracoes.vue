@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-200">
+  <div class="min-h-screen bg-transparent text-zinc-900 dark:text-zinc-100 flex flex-col font-sans">
     <!-- Header -->
     <header class="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -254,12 +254,74 @@
         Configurações salvas com sucesso!
       </p>
 
+      <!-- Gerenciamento de Dados / Zona de Perigo -->
+      <section class="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-rose-200 dark:border-rose-950/60 shadow-xs flex flex-col gap-3 mt-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
+            <span class="material-icons text-lg">delete_sweep</span>
+          </div>
+          <div>
+            <h2 class="text-sm font-semibold text-rose-700 dark:text-rose-400">Zona de Perigo</h2>
+            <p class="text-xs text-zinc-400">Gerenciamento do banco de dados local</p>
+          </div>
+        </div>
+
+        <p class="text-xs text-zinc-500 dark:text-zinc-400">
+          Deseja zerar o histórico? Você pode apagar todos os registros de pontos e compensações salvos localmente no seu dispositivo.
+        </p>
+
+        <!-- Feedback de limpeza -->
+        <p v-if="mensagemSucessoLimpeza" class="text-xs text-center text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-500/20">
+          {{ mensagemSucessoLimpeza }}
+        </p>
+
+        <button
+          type="button"
+          @click="modalConfirmarLimpezaAberto = true"
+          class="w-full py-3 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-semibold active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2">
+          <span class="material-icons text-base">delete_forever</span>
+          <span>Remover Todos os Registros</span>
+        </button>
+      </section>
+
       <!-- Informações do App -->
       <footer class="pt-6 border-t border-zinc-200 dark:border-zinc-800/80 text-center text-xs text-zinc-400 dark:text-zinc-600 flex flex-col gap-1">
         <span>Controle de Ponto PWA • 100% Offline-first</span>
         <span>Dados salvos exclusivamente no seu dispositivo</span>
       </footer>
     </main>
+
+    <!-- Modal de Confirmação para Remover Todos os Registros -->
+    <div
+      v-if="modalConfirmarLimpezaAberto"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div class="w-full max-w-sm rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl flex flex-col gap-4 text-center">
+        <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
+          <span class="material-icons text-2xl">warning</span>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-zinc-900 dark:text-white">Apagar todos os registros?</h3>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">
+            Esta ação é <strong>irreversível</strong>. Todo o histórico de pontos e compensações salvo no IndexedDB será permanentemente apagado. Suas configurações de jornada e salário serão mantidas.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 pt-2">
+          <button
+            type="button"
+            @click="modalConfirmarLimpezaAberto = false"
+            class="flex-1 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            @click="executarLimpezaTotal"
+            class="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5">
+            <span class="material-icons text-sm">delete_forever</span>
+            <span>Sim, Apagar Tudo</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -277,6 +339,7 @@ import {
   obterConfigFinanceira,
   salvarConfigFinanceira,
   ConfigFinanceira,
+  limparTodosOsRegistros,
 } from '@/services/timesheetStorage';
 import { useTheme } from '@/composables/useTheme';
 import ChangeTheme from '@/components/ChangeTheme.vue';
@@ -288,6 +351,9 @@ const minutosCarga = ref(0);
 const horasAlmoco = ref(1);
 const minutosAlmoco = ref(0);
 const salvoSucesso = ref(false);
+
+const modalConfirmarLimpezaAberto = ref(false);
+const mensagemSucessoLimpeza = ref('');
 
 const formCiclo = ref<ConfigCiclo>({
   diaInicio: 27,
@@ -361,6 +427,19 @@ const salvarConfiguracoes = () => {
   setTimeout(() => {
     salvoSucesso.value = false;
   }, 2500);
+};
+
+const executarLimpezaTotal = async () => {
+  try {
+    await limparTodosOsRegistros();
+    modalConfirmarLimpezaAberto.value = false;
+    mensagemSucessoLimpeza.value = 'Todos os registros foram removidos com sucesso!';
+    setTimeout(() => {
+      mensagemSucessoLimpeza.value = '';
+    }, 4000);
+  } catch (err: any) {
+    alert('Erro ao apagar registros: ' + (err.message || err));
+  }
 };
 
 onMounted(() => {
