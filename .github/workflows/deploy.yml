@@ -1,6 +1,5 @@
 name: Deploy PWA to GitHub Pages
 
-# Executa o script sempre que houver um push na branch principal (main ou master)
 on:
   push:
     branches:
@@ -8,7 +7,6 @@ on:
       - master
   workflow_dispatch:
 
-# Permissões necessárias para o GitHub Actions publicar na página
 permissions:
   contents: read
   pages: write
@@ -32,22 +30,28 @@ jobs:
       - name: Configurar o Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Versão estável do Node
+          node-version: '22'
+          cache: 'npm'
 
       - name: Instalar Dependências
-        run: npm install
-
-      - name: Compilar o TypeScript (Gera a pasta dist)
-        run: npm run build
+        run: npm ci
 
       - name: Configurar o GitHub Pages
+        id: pages
         uses: actions/configure-pages@v4
 
-      - name: Fazer o Upload dos Ficheiros (Artefato)
+      - name: Compilar o Projeto (Vite + Vue 3)
+        run: npm run build
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_path }}
+
+      - name: Fallback SPA para GitHub Pages (404.html)
+        run: cp dist/index.html dist/404.html
+
+      - name: Fazer o Upload do Artefato
         uses: actions/upload-pages-artifact@v3
         with:
-          # Faz o upload de todo o diretório atual, que agora inclui a pasta dist compilada pelo Actions
-          path: '.' 
+          path: 'dist'
 
       - name: Publicar no GitHub Pages
         id: deployment

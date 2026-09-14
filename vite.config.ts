@@ -5,6 +5,7 @@ import { fileURLToPath, URL } from 'node:url'
 import packageJson from './package.json' with { type: 'json' }
 
 export default defineConfig({
+  base: process.env.BASE_URL || './',
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
