@@ -296,47 +296,65 @@
             </button>
           </div>
 
-          <!-- Hero Card: Estimativa Total Bruta -->
+          <!-- Hero Card: Estimativa Total com Banco de Horas -->
           <div class="p-5 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 shadow-sm flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-xs uppercase tracking-wider font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
                 <span class="material-icons text-sm">payments</span>
-                <span>Previsão de Ganhos Brutos</span>
+                <span>Previsão de Ganhos</span>
               </span>
               <span class="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
                 {{ cicloAtivo?.rotulo }}
               </span>
             </div>
 
-            <div class="text-4xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
-              {{ formatarMoeda(estimativas.totalBruto) }}
+            <div
+              class="text-4xl font-extrabold font-mono tracking-tight"
+              :class="estimativas.totalEstimado >= estimativas.salarioBase ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'">
+              {{ formatarMoeda(estimativas.totalEstimado) }}
             </div>
 
             <p class="text-[11px] text-zinc-500 dark:text-zinc-400">
-              Salário base + Horas Extras (50% e 100%) + DSR estimado sobre extras
+              <span v-if="estimativas.saldoMs > 0">
+                Salário base + {{ estimativas.saldoFormatado }} extras no banco de horas (+{{ (estimativas.pctExtra * 100).toFixed(0) }}%)
+              </span>
+              <span v-else-if="estimativas.saldoMs < 0">
+                Salário base com débito de {{ estimativas.saldoFormatado }} no banco de horas
+              </span>
+              <span v-else>
+                Salário base contratual (banco de horas zerado)
+              </span>
             </p>
 
             <!-- Quick Chips -->
             <div class="grid grid-cols-3 gap-2 pt-2 border-t border-emerald-500/15 text-center">
               <div class="p-2 rounded-2xl bg-white/70 dark:bg-zinc-900/70 border border-zinc-200/50 dark:border-zinc-800">
-                <span class="text-[10px] text-zinc-400 block">Base</span>
+                <span class="text-[10px] text-zinc-400 block">Salário Base</span>
                 <span class="text-xs font-bold font-mono text-zinc-700 dark:text-zinc-300">{{ formatarMoeda(salarioDoCicloInfo.salario) }}</span>
               </div>
               <div class="p-2 rounded-2xl bg-white/70 dark:bg-zinc-900/70 border border-zinc-200/50 dark:border-zinc-800">
-                <span class="text-[10px] text-zinc-400 block">Extras</span>
-                <span class="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">{{ formatarMoeda(estimativas.valorExtras50 + estimativas.valorExtras100) }}</span>
+                <span class="text-[10px] text-zinc-400 block">Saldo Banco</span>
+                <span
+                  class="text-xs font-bold font-mono"
+                  :class="estimativas.saldoMs >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+                  {{ estimativas.saldoFormatado }}
+                </span>
               </div>
               <div class="p-2 rounded-2xl bg-white/70 dark:bg-zinc-900/70 border border-zinc-200/50 dark:border-zinc-800">
-                <span class="text-[10px] text-zinc-400 block">DSR s/ Extras</span>
-                <span class="text-xs font-bold font-mono text-blue-600 dark:text-blue-400">{{ formatarMoeda(estimativas.valorDsr) }}</span>
+                <span class="text-[10px] text-zinc-400 block">Valor Banco</span>
+                <span
+                  class="text-xs font-bold font-mono"
+                  :class="estimativas.saldoMs >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+                  {{ (estimativas.saldoMs >= 0 ? '+' : '') + formatarMoeda(estimativas.valorBancoHoras) }}
+                </span>
               </div>
             </div>
           </div>
 
-          <!-- Detalhamento dos Proventos -->
+          <!-- Detalhamento dos Proventos & Banco -->
           <div class="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col gap-3">
             <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-              Detalhamento de Proventos
+              Detalhamento de Proventos & Banco
             </h4>
 
             <div class="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800 text-xs">
@@ -344,104 +362,66 @@
               <div class="py-2.5 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <span class="material-icons text-zinc-400 text-base">account_balance_wallet</span>
-                  <span class="text-zinc-700 dark:text-zinc-300">Salário Contratual</span>
+                  <div>
+                    <span class="text-zinc-700 dark:text-zinc-300 block">Salário Contratual</span>
+                    <span class="text-[11px] text-zinc-400">Remuneração mensal fixa do ciclo</span>
+                  </div>
                 </div>
                 <span class="font-mono font-semibold">{{ formatarMoeda(salarioDoCicloInfo.salario) }}</span>
               </div>
 
-              <!-- Horas Extras 50% -->
+              <!-- Banco de Horas (Horas Extras / Débito) -->
               <div class="py-2.5 flex items-center justify-between">
                 <div class="flex flex-col">
                   <div class="flex items-center gap-2">
-                    <span class="material-icons text-emerald-500 text-base">alarm_add</span>
-                    <span class="text-zinc-700 dark:text-zinc-300">Horas Extras 50%</span>
+                    <span
+                      class="material-icons text-base"
+                      :class="estimativas.saldoMs >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+                      timelapse
+                    </span>
+                    <span class="text-zinc-700 dark:text-zinc-300">
+                      {{ estimativas.saldoMs >= 0 ? 'Horas Extras no Banco' : 'Horas em Débito no Banco' }}
+                    </span>
                   </div>
-                  <span class="text-[11px] text-zinc-400 pl-6">{{ estimativas.horasExtras50Formatado }} acumulados</span>
-                </div>
-                <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                  + {{ formatarMoeda(estimativas.valorExtras50) }}
-                </span>
-              </div>
-
-              <!-- Horas Extras 100% -->
-              <div class="py-2.5 flex items-center justify-between">
-                <div class="flex flex-col">
-                  <div class="flex items-center gap-2">
-                    <span class="material-icons text-emerald-500 text-base">weekend</span>
-                    <span class="text-zinc-700 dark:text-zinc-300">Extras 100% (FDS/Feriados)</span>
-                  </div>
-                  <span class="text-[11px] text-zinc-400 pl-6">{{ estimativas.horasExtras100Formatado }} trabalhados</span>
-                </div>
-                <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                  + {{ formatarMoeda(estimativas.valorExtras100) }}
-                </span>
-              </div>
-
-              <!-- DSR sobre Horas Extras -->
-              <div class="py-2.5 flex items-center justify-between">
-                <div class="flex flex-col">
-                  <div class="flex items-center gap-2">
-                    <span class="material-icons text-blue-500 text-base">savings</span>
-                    <span class="text-zinc-700 dark:text-zinc-300">DSR sobre Horas Extras</span>
-                  </div>
-                  <span class="text-[11px] text-zinc-400 pl-6">Reflexo em repousos remunerados (CLT)</span>
-                </div>
-                <span class="font-mono font-semibold text-blue-600 dark:text-blue-400">
-                  + {{ formatarMoeda(estimativas.valorDsr) }}
-                </span>
-              </div>
-
-              <!-- Banco de Horas (Saldo Líquido) -->
-              <div class="py-2.5 flex items-center justify-between">
-                <div class="flex flex-col">
-                  <div class="flex items-center gap-2">
-                    <span class="material-icons text-purple-500 text-base">timelapse</span>
-                    <span class="text-zinc-700 dark:text-zinc-300">Equivalência Saldo em Horas</span>
-                  </div>
-                  <span class="text-[11px] text-zinc-400 pl-6 font-mono font-semibold">
-                    Saldo: {{ formatarSaldo(saldoFiltradoMs) }}
+                  <span class="text-[11px] text-zinc-400 pl-6 font-mono">
+                    {{ estimativas.saldoFormatado }}
+                    <span v-if="estimativas.saldoMs > 0"> (+{{ (estimativas.pctExtra * 100).toFixed(0) }}% adicional)</span>
                   </span>
                 </div>
                 <span
                   class="font-mono font-semibold"
-                  :class="saldoFiltradoMs >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
-                  {{ formatarMoeda(estimativas.valorSaldoBanco) }}
+                  :class="estimativas.saldoMs >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+                  {{ (estimativas.saldoMs >= 0 ? '+' : '') + formatarMoeda(estimativas.valorBancoHoras) }}
                 </span>
               </div>
-            </div>
-          </div>
 
-          <!-- Estimativa de Deduções & Líquido -->
-          <div class="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col gap-3">
-            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-              Previsão de Descontos & Líquido
-            </h4>
-
-            <div class="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800 text-xs">
-              <!-- INSS Estimado -->
+              <!-- Valor Base da Hora e Hora Extra -->
               <div class="py-2.5 flex items-center justify-between">
                 <div class="flex flex-col">
                   <div class="flex items-center gap-2">
-                    <span class="material-icons text-rose-500 text-base">receipt_long</span>
-                    <span class="text-zinc-700 dark:text-zinc-300">INSS Estimado</span>
+                    <span class="material-icons text-blue-500 text-base">schedule</span>
+                    <span class="text-zinc-700 dark:text-zinc-300">Valor da Hora de Trabalho</span>
                   </div>
-                  <span class="text-[11px] text-zinc-400 pl-6">
-                    Tabela Oficial Progressiva CLT (~{{ estimativas.aliquotaEfetivaInss }}%)
+                  <span class="text-[11px] text-zinc-400 pl-6 font-mono">
+                    Base: {{ formatarMoeda(estimativas.valorHora) }}/h • Extra (+{{ (estimativas.pctExtra * 100).toFixed(0) }}%): {{ formatarMoeda(estimativas.valorHoraExtra) }}/h
                   </span>
                 </div>
-                <span class="font-mono font-semibold text-rose-600 dark:text-rose-400">
-                  - {{ formatarMoeda(estimativas.inssEstimado) }}
+                <span class="font-mono font-semibold text-zinc-700 dark:text-zinc-300">
+                  {{ formatarMoeda(estimativas.valorHora) }}/h
                 </span>
               </div>
 
-              <!-- Total Líquido -->
+              <!-- Total Estimado -->
               <div class="py-3 flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/40 -mx-5 px-5">
                 <div class="flex items-center gap-2">
                   <span class="material-icons text-emerald-500 text-lg">check_circle</span>
-                  <span class="font-bold text-sm text-zinc-900 dark:text-white">Estimativa Líquida</span>
+                  <div>
+                    <span class="font-bold text-sm text-zinc-900 dark:text-white block">Previsão Total</span>
+                    <span class="text-[10px] text-zinc-400">Salário base {{ estimativas.saldoMs >= 0 ? '+' : '-' }} equivalência do banco</span>
+                  </div>
                 </div>
                 <span class="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                  {{ formatarMoeda(estimativas.totalLiquido) }}
+                  {{ formatarMoeda(estimativas.totalEstimado) }}
                 </span>
               </div>
             </div>
@@ -986,7 +966,7 @@ const restaurarSalarioPadrao = () => {
 };
 
 // =====================================================================
-// Cálculos do Dashboard de Ganhos
+// Cálculos do Dashboard de Ganhos com Base em Banco de Horas
 // =====================================================================
 const estimativas = computed(() => {
   const salarioBase = salarioDoCicloInfo.value.salario || 0;
@@ -995,19 +975,27 @@ const estimativas = computed(() => {
   const totalHorasEsperadasMes = diasUteisConfig * cargaHorariaHoras;
 
   const valorHora = totalHorasEsperadasMes > 0 ? salarioBase / totalHorasEsperadasMes : 0;
+  const pctExtra = (configFinancas.value.adicionalExtra ?? 50) / 100;
+  const valorHoraExtra = valorHora * (1 + pctExtra);
+
+  // O cálculo é baseado exclusivamente no saldo acumulado do Banco de Horas (saldoFiltradoMs)
+  const saldoMs = saldoFiltradoMs.value;
+  const saldoHoras = saldoMs / 3600000;
+
+  // Se o saldo for positivo, são horas extras calculadas com o adicional (ex: +50%)
+  // Se for negativo, é débito proporcional ao valor da hora normal
+  const valorBancoHoras = saldoMs >= 0
+    ? saldoHoras * valorHoraExtra
+    : saldoHoras * valorHora;
+
+  // Previsão Total: Salário Base + Valor do Banco de Horas
+  const totalEstimado = salarioBase + valorBancoHoras;
 
   let totalTrabalhadoMs = 0;
-  let horasExtras50Ms = 0;
-  let horasExtras100Ms = 0;
   let diasTrabalhados = 0;
 
   for (const reg of registrosFiltrados.value) {
-    if (reg.isCompensacao) {
-      if (reg.saldoCompensacao && reg.saldoCompensacao > 0) {
-        horasExtras50Ms += reg.saldoCompensacao;
-      }
-      continue;
-    }
+    if (reg.isCompensacao) continue;
 
     if (reg.entrada && reg.saidaDia) {
       let trabalhadoDiaMs = 0;
@@ -1019,77 +1007,8 @@ const estimativas = computed(() => {
 
       totalTrabalhadoMs += trabalhadoDiaMs;
       if (trabalhadoDiaMs > 0) diasTrabalhados++;
-
-      // Detecta fim de semana (Sábado ou Domingo)
-      const partes = reg.data.split('/');
-      if (partes.length === 3) {
-        const diaNum = parseInt(partes[0], 10);
-        const mesNum = parseInt(partes[1], 10) - 1;
-        const anoNum = parseInt(partes[2], 10);
-        const dataObj = new Date(anoNum, mesNum, diaNum);
-        const diaSemana = dataObj.getDay();
-
-        if (diaSemana === 0 || diaSemana === 6) {
-          // Fim de semana: 100% extra
-          horasExtras100Ms += trabalhadoDiaMs;
-        } else {
-          // Dia de semana: o que passar da carga horária é 50%
-          if (trabalhadoDiaMs > cargaHoraria.value) {
-            horasExtras50Ms += (trabalhadoDiaMs - cargaHoraria.value);
-          }
-        }
-      }
     }
   }
-
-  // Valores calculados
-  const pctExtra50 = (configFinancas.value.adicionalExtra ?? 50) / 100;
-  const pctExtra100 = (configFinancas.value.adicionalFimDeSemana ?? 100) / 100;
-
-  const valorExtras50 = (horasExtras50Ms / 3600000) * valorHora * (1 + pctExtra50);
-  const valorExtras100 = (horasExtras100Ms / 3600000) * valorHora * (1 + pctExtra100);
-
-  // DSR sobre Horas Extras: (Total R$ Extras / Dias Úteis) * Dias Repouso (média 5 domingos/feriados)
-  const diasRepouso = 5;
-  const valorDsr = diasUteisConfig > 0 ? ((valorExtras50 + valorExtras100) / diasUteisConfig) * diasRepouso : 0;
-
-  // Valor do banco de horas no ciclo
-  const valorSaldoBanco = saldoFiltradoMs.value >= 0
-    ? (saldoFiltradoMs.value / 3600000) * valorHora * (1 + pctExtra50)
-    : (saldoFiltradoMs.value / 3600000) * valorHora;
-
-  // Total Bruto
-  const totalBruto = salarioBase + valorExtras50 + valorExtras100 + valorDsr;
-
-  // Cálculo progressivo oficial do INSS CLT (2025/2026)
-  const calcularINSS = (bruto: number): number => {
-    if (bruto <= 0) return 0;
-    const faixas = [
-      { limite: 1518.00, aliquota: 0.075 },
-      { limite: 2793.88, aliquota: 0.09 },
-      { limite: 4190.83, aliquota: 0.12 },
-      { limite: 8157.41, aliquota: 0.14 },
-    ];
-
-    let inss = 0;
-    let baseAnterior = 0;
-
-    for (const faixa of faixas) {
-      if (bruto > baseAnterior) {
-        const baseCalculo = Math.min(bruto, faixa.limite) - baseAnterior;
-        inss += baseCalculo * faixa.aliquota;
-        baseAnterior = faixa.limite;
-      } else {
-        break;
-      }
-    }
-
-    return Math.round(inss * 100) / 100;
-  };
-
-  const inssEstimado = calcularINSS(totalBruto);
-  const totalLiquido = Math.max(0, totalBruto - inssEstimado);
-  const aliquotaEfetivaInss = totalBruto > 0 ? ((inssEstimado / totalBruto) * 100).toFixed(1) : '0';
 
   const cargaPrevistaCicloMs = diasTrabalhados * cargaHoraria.value;
   const percentualJornadaCumprida = cargaPrevistaCicloMs > 0
@@ -1101,21 +1020,16 @@ const estimativas = computed(() => {
   return {
     salarioBase,
     valorHora,
+    valorHoraExtra,
+    pctExtra,
+    saldoMs,
+    saldoHoras,
+    saldoFormatado: formatarSaldo(saldoMs),
+    valorBancoHoras,
+    totalEstimado,
     totalTrabalhadoMs,
     totalHorasTrabalhadasFormatado: formatarDuracaoCurta(totalTrabalhadoMs),
     diasTrabalhados,
-    horasExtras50Ms,
-    horasExtras50Formatado: formatarDuracaoCurta(horasExtras50Ms),
-    valorExtras50,
-    horasExtras100Ms,
-    horasExtras100Formatado: formatarDuracaoCurta(horasExtras100Ms),
-    valorExtras100,
-    valorDsr,
-    valorSaldoBanco,
-    totalBruto,
-    inssEstimado,
-    aliquotaEfetivaInss,
-    totalLiquido,
     percentualJornadaCumprida,
     mediaDiariaTrabalhadaFormatada: formatarDuracaoCurta(mediaDiariaMs),
   };
