@@ -286,7 +286,7 @@
 
       <!-- Informações do App -->
       <footer class="pt-6 border-t border-zinc-200 dark:border-zinc-800/80 text-center text-xs text-zinc-400 dark:text-zinc-600 flex flex-col gap-1">
-        <span>Controle de Ponto PWA • 100% Offline-first</span>
+        <span>Controle de Ponto PWA • v{{ APP_VERSION }} • 100% Offline-first</span>
         <span>Dados salvos exclusivamente no seu dispositivo</span>
       </footer>
     </main>
@@ -343,6 +343,7 @@ import {
 } from '@/services/timesheetStorage';
 import { useTheme } from '@/composables/useTheme';
 import ChangeTheme from '@/components/ChangeTheme.vue';
+import { APP_VERSION } from '@/config/version';
 
 const { currentTheme, setTheme } = useTheme();
 
